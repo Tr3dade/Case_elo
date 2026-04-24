@@ -1,11 +1,84 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { sampleRequests, ReimbursementRequest, projects, costCenters } from '../../data/reimbursement';
 
 interface TecnicoPagesProps {
   tab: number;
 }
 
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  itemErrors: { [itemId: string]: string[] };
+}
+
 const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
+  const [validationResults, setValidationResults] = useState<{ [requestId: string]: ValidationResult }>({});
+
+  const validateRequest = (request: ReimbursementRequest): ValidationResult => {
+    const errors: string[] = [];
+    const itemErrors: { [itemId: string]: string[] } = {};
+    let isValid = true;
+
+    const today = new Date();
+    const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+    request.items.forEach(item => {
+      const itemErrorList: string[] = [];
+
+      // Validar prazo (90 dias)
+      const itemDate = new Date(item.date);
+      if (itemDate < ninetyDaysAgo) {
+        itemErrorList.push('Gasto com data superior a 90 dias não é elegível para reembolso');
+        isValid = false;
+      }
+
+      // Validar se projeto existe
+      const project = projects.find(p => p.id === item.projectId);
+      if (!project) {
+        itemErrorList.push('Projeto não encontrado');
+        isValid = false;
+      }
+
+      // Validar centro de custo
+      const costCenter = costCenters.find(c => c.id === item.costCenterId);
+      if (!costCenter) {
+        itemErrorList.push('Centro de custo inválido');
+        isValid = false;
+      }
+
+      // Validar anexos
+      if (request.attachments.length === 0) {
+        errors.push('Nenhum comprovante fiscal anexado');
+        isValid = false;
+      } else {
+        // Assumir que há pelo menos um anexo por item, mas na prática seria mais complexo
+        // Para simplificar, validar se descrição corresponde ao tipo
+        if (item.type === 'Transporte' && !item.description.toLowerCase().includes('uber') && !item.description.toLowerCase().includes('taxi')) {
+          itemErrorList.push('Descrição não corresponde ao tipo de gasto');
+          isValid = false;
+        }
+      }
+
+      if (itemErrorList.length > 0) {
+        itemErrors[item.id] = itemErrorList;
+      }
+    });
+
+    return { isValid, errors, itemErrors };
+  };
+
+  const handleValidateRequest = (request: ReimbursementRequest) => {
+    const result = validateRequest(request);
+    setValidationResults(prev => ({ ...prev, [request.id]: result }));
+  };
+
+  const getPendingRequests = () => {
+    return sampleRequests.filter(req => req.status === 'Em análise');
+  };
+
   if (tab === 0) {
+    const pendingRequests = getPendingRequests();
+
     return (
       <div style={{ paddingTop: '16px' }}>
         <div className="section-title">Validar Conformidade</div>
@@ -13,7 +86,7 @@ const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-label">Para validar</div>
-            <div className="stat-val amber">6</div>
+            <div className="stat-val amber">{pendingRequests.length}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Validadas hoje</div>
@@ -28,45 +101,113 @@ const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
             <div className="stat-val blue">5</div>
           </div>
         </div>
-        <div className="card">
-          <div className="card-title">Solicitação #2024-018 — João Martins</div>
-          <div className="two-col">
-            <div>
-              <div style={{ marginBottom: '12px' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px' }}>Checklist de conformidade</div>
-                {[
-                  'Planilha preenchida corretamente',
-                  'Comprovante fiscal anexado',
-                  'Gasto dentro do prazo (90 dias)',
-                  'Centro de custo válido',
-                  'Descrição compatível com comprovante'
-                ].map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-                    <input type="checkbox" defaultChecked={i < 3} style={{ width: 'auto' }} />
-                    <span style={{ fontSize: '13px', color: i < 3 ? 'var(--color-text-primary)' : 'var(--color-text-secondary)' }}>{item}</span>
+
+        {pendingRequests.length === 0 ? (
+          <div className="card">
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
+              Nenhuma solicitação pendente de validação
+            </div>
+          </div>
+        ) : (
+          pendingRequests.map(request => {
+            const validation = validationResults[request.id];
+            const isValidated = !!validation;
+
+            return (
+              <div key={request.id} className="card">
+                <div className="card-title">Solicitação #{request.id} — {request.requestedBy}</div>
+                <div className="two-col">
+                  <div>
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px' }}>Itens da solicitação</div>
+                      {request.items.map(item => {
+                        const project = projects.find(p => p.id === item.projectId);
+                        const costCenter = costCenters.find(c => c.id === item.costCenterId);
+                        const itemValidationErrors = validation?.itemErrors[item.id] || [];
+
+                        return (
+                          <div key={item.id} style={{ 
+                            padding: '8px', 
+                            border: '0.5px solid var(--color-border-tertiary)', 
+                            borderRadius: 'var(--border-radius-sm)', 
+                            marginBottom: '8px',
+                            background: itemValidationErrors.length > 0 ? 'rgba(255, 85, 85, 0.05)' : 'transparent'
+                          }}>
+                            <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>
+                              {item.type} - R$ {item.amount.toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '2px' }}>
+                              {item.description}
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                              Data: {new Date(item.date).toLocaleDateString('pt-BR')} | Projeto: {project?.name || 'N/A'} | CC: {costCenter?.code || 'N/A'}
+                            </div>
+                            {itemValidationErrors.length > 0 && (
+                              <div style={{ marginTop: '6px' }}>
+                                {itemValidationErrors.map((error, idx) => (
+                                  <div key={idx} style={{ fontSize: '11px', color: 'var(--color-accent-red)', marginBottom: '2px' }}>
+                                    ⚠ {error}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {validation && !validation.isValid && (
+                      <div style={{ marginTop: '12px', padding: '8px', background: 'rgba(255, 85, 85, 0.05)', border: '0.5px solid var(--color-accent-red)', borderRadius: 'var(--border-radius-sm)' }}>
+                        <div style={{ fontSize: '12px', fontWeight: '500', color: 'var(--color-accent-red)', marginBottom: '4px' }}>Inconsistências encontradas:</div>
+                        {validation.errors.map((error, idx) => (
+                          <div key={idx} style={{ fontSize: '11px', color: 'var(--color-accent-red)' }}>
+                            • {error}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ))}
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px' }}>Comprovantes anexados ({request.attachments.length})</div>
+                    {request.attachments.length === 0 ? (
+                      <div style={{ background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-accent-red)', borderRadius: 'var(--border-radius-md)', padding: '24px', textAlign: 'center', color: 'var(--color-accent-red)' }}>
+                        <div style={{ fontSize: '24px', marginBottom: '6px' }}>⚠</div>
+                        <div style={{ fontSize: '13px', fontWeight: '500' }}>Nenhum comprovante anexado</div>
+                      </div>
+                    ) : (
+                      request.attachments.map((attachment, idx) => (
+                        <div key={idx} style={{ background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 'var(--border-radius-md)', padding: '12px', marginBottom: '8px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '4px' }}>{attachment}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>PDF • 128 KB</div>
+                          <button className="btn btn-sm">Visualizar</button>
+                        </div>
+                      ))
+                    )}
+                    {isValidated && (
+                      <div style={{ marginTop: '12px' }}>
+                        <label style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block', marginBottom: '4px' }}>Observação (opcional)</label>
+                        <textarea rows={3} placeholder="Apontar pendências ou observações..."></textarea>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="action-row">
+                  {!isValidated ? (
+                    <button className="btn btn-primary" onClick={() => handleValidateRequest(request)}>
+                      Validar Solicitação
+                    </button>
+                  ) : validation?.isValid ? (
+                    <>
+                      <button className="btn btn-danger">Solicitar ajustes</button>
+                      <button className="btn btn-primary">Encaminhar ao gestor</button>
+                    </>
+                  ) : (
+                    <button className="btn btn-danger">Solicitar ajustes</button>
+                  )}
+                </div>
               </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px' }}>Comprovante anexado</div>
-              <div style={{ background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 'var(--border-radius-md)', padding: '24px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', marginBottom: '6px' }}>📄</div>
-                <div style={{ fontSize: '13px', fontWeight: '500' }}>comprovante_uber.pdf</div>
-                <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>128 KB · PDF</div>
-                <button className="btn btn-sm" style={{ marginTop: '8px' }}>Visualizar</button>
-              </div>
-              <div style={{ marginTop: '12px' }}>
-                <label style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block', marginBottom: '4px' }}>Observação (opcional)</label>
-                <textarea rows={3} placeholder="Apontar pendências ou observações..."></textarea>
-              </div>
-            </div>
-          </div>
-          <div className="action-row">
-            <button className="btn btn-danger">Solicitar ajustes</button>
-            <button className="btn btn-primary">Encaminhar ao gestor</button>
-          </div>
-        </div>
+            );
+          })
+        )}
       </div>
     );
   }

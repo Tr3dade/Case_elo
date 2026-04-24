@@ -74,15 +74,24 @@ export const sampleRequests: ReimbursementRequest[] = [
         projectId: 'alpha',
         costCenterId: 4521,
         amount: 156.0
+      },
+      {
+        id: 'item-2',
+        date: '2026-01-15', // Data antiga para testar validação de 90 dias
+        type: 'Alimentação',
+        description: 'Almoço de trabalho',
+        projectId: 'beta',
+        costCenterId: 3308,
+        amount: 45.0
       }
     ],
     attachments: ['comprovante_uber.pdf'],
     status: 'Em análise',
-    costCenterIds: [4521],
+    costCenterIds: [4521, 3308],
     notifications: [
       'Gestor Ana Lima notificado para centro de custo 4521',
       'Financeiro notificado para revisão financeira'
     ],
-    total: 156.0
+    total: 201.0
   }
 ];
