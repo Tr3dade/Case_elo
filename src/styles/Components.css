@@ -203,7 +203,58 @@ tr:hover td {
   color: var(--color-background-primary);
   border-color: var(--color-accent-green);
 }
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  z-index: 1000;
+}
 
+.dropdown-item {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item.disabled {
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+.dropdown-item:hover:not(.disabled) {
+  background: var(--color-background-secondary);
+}
+
+.submenu {
+  border-top: 0.5px solid var(--color-border-tertiary);
+}
+
+.submenu-item {
+  padding: 8px 16px 8px 32px;
+  font-size: 12px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.submenu-item:hover {
+  background: var(--color-background-secondary);
+}
+
+.submenu-item.active {
+  background: var(--color-accent-cyan);
+  color: var(--color-background-primary);
+}
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

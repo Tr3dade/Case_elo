@@ -24,7 +24,7 @@ const App: React.FC = () => {
 
   return (
     <div className="app">
-      <Topbar roleData={currentRoleData} />
+      <Topbar roleData={currentRoleData} currentRole={currentRole} onRoleChange={handleRoleChange} />
       <RoleSelector currentRole={currentRole} onRoleChange={handleRoleChange} />
       <NavTabs tabs={currentRoleData.tabs} currentTab={currentTab} onTabChange={handleTabChange} />
       <Content role={currentRole} tab={currentTab} />
