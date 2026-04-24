@@ -13,6 +13,7 @@ interface ValidationResult {
 
 const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
   const [validationResults, setValidationResults] = useState<{ [requestId: string]: ValidationResult }>({});
+  const [comments, setComments] = useState<{ [requestId: string]: string }>({});
 
   const validateRequest = (request: ReimbursementRequest): ValidationResult => {
     const errors: string[] = [];
@@ -51,8 +52,6 @@ const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
         errors.push('Nenhum comprovante fiscal anexado');
         isValid = false;
       } else {
-        // Assumir que há pelo menos um anexo por item, mas na prática seria mais complexo
-        // Para simplificar, validar se descrição corresponde ao tipo
         if (item.type === 'Transporte' && !item.description.toLowerCase().includes('uber') && !item.description.toLowerCase().includes('taxi')) {
           itemErrorList.push('Descrição não corresponde ao tipo de gasto');
           isValid = false;
@@ -68,8 +67,40 @@ const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
   };
 
   const handleValidateRequest = (request: ReimbursementRequest) => {
-    const result = validateRequest(request);
-    setValidationResults(prev => ({ ...prev, [request.id]: result }));
+    const validation = validateRequest(request);
+    setValidationResults(prev => ({ ...prev, [request.id]: validation }));
+    if (validation.isValid) {
+      request.status = 'Em análise';
+    } else {
+      request.status = 'Aguardando ajustes';
+    }
+  };
+
+  const handleRequestAdjustments = (request: ReimbursementRequest, comment: string) => {
+    const newHistory = {
+      id: `hist-${Date.now()}`,
+      timestamp: new Date().toLocaleString('pt-BR'),
+      actor: 'Carlos Souza',
+      action: 'Solicitado ajustes ao colaborador',
+      comments: comment || undefined
+    };
+
+    request.status = 'Aguardando ajustes';
+    request.history.push(newHistory);
+    setComments(prev => ({ ...prev, [request.id]: comment }));
+  };
+
+  const handleForwardToManager = (request: ReimbursementRequest) => {
+    const newHistory = {
+      id: `hist-${Date.now()}`,
+      timestamp: new Date().toLocaleString('pt-BR'),
+      actor: 'Carlos Souza',
+      action: 'Encaminhado ao gestor para aprovação',
+      comments: comments[request.id] || undefined
+    };
+
+    request.status = 'Em análise';
+    request.history.push(newHistory);
   };
 
   const getPendingRequests = () => {
@@ -185,7 +216,12 @@ const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
                     {isValidated && (
                       <div style={{ marginTop: '12px' }}>
                         <label style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block', marginBottom: '4px' }}>Observação (opcional)</label>
-                        <textarea rows={3} placeholder="Apontar pendências ou observações..."></textarea>
+                        <textarea 
+                          rows={3} 
+                          placeholder="Apontar pendências ou observações..."
+                          value={comments[request.id] || ''}
+                          onChange={e => setComments(prev => ({ ...prev, [request.id]: e.target.value }))}
+                        />
                       </div>
                     )}
                   </div>
@@ -197,11 +233,11 @@ const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
                     </button>
                   ) : validation?.isValid ? (
                     <>
-                      <button className="btn btn-danger">Solicitar ajustes</button>
-                      <button className="btn btn-primary">Encaminhar ao gestor</button>
+                      <button className="btn btn-danger" onClick={() => handleRequestAdjustments(request, comments[request.id] || '')}>Solicitar ajustes</button>
+                      <button className="btn btn-primary" onClick={() => handleForwardToManager(request)}>Encaminhar ao gestor</button>
                     </>
                   ) : (
-                    <button className="btn btn-danger">Solicitar ajustes</button>
+                    <button className="btn btn-danger" onClick={() => handleRequestAdjustments(request, comments[request.id] || '')}>Solicitar ajustes</button>
                   )}
                 </div>
               </div>

@@ -39,7 +39,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
     const total = requests.reduce((sum, request) => sum + request.total, 0);
     const approved = requests.filter((request) => request.status === 'Aprovado').length;
     const pending = requests.filter((request) => request.status === 'Enviado' || request.status === 'Em análise').length;
-    const rejected = requests.filter((request) => request.status === 'Recusado').length;
+    const rejected = requests.filter((request) => request.status === 'Rejeitado').length;
     return { total, approved, pending, rejected };
   }, [requests]);
 
@@ -129,7 +129,15 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
       status: 'Enviado',
       costCenterIds: involvedCostCenters,
       notifications,
-      total
+      total,
+      history: [
+        {
+          id: `hist-${Date.now()}`,
+          timestamp: new Date().toLocaleString('pt-BR'),
+          actor: 'João Martins',
+          action: 'Solicitação enviada',
+        }
+      ]
     };
 
     setRequests((current) => [newRequest, ...current]);
@@ -192,7 +200,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
                     <td>{request.items.length}</td>
                     <td style={{ fontWeight: '500' }}>R$ {request.total.toFixed(2)}</td>
                     <td>
-                      <span className={`badge ${request.status === 'Aprovado' ? 'badge-approved' : request.status === 'Recusado' ? 'badge-rejected' : 'badge-review'}`}>
+                      <span className={`badge ${request.status === 'Aprovado' ? 'badge-approved' : request.status === 'Rejeitado' ? 'badge-rejected' : 'badge-review'}`}>
                         {request.status}
                       </span>
                     </td>
