@@ -21,7 +21,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #185FA5;
+  background: var(--color-accent-cyan);
 }
 
 .topbar-user {
@@ -80,9 +80,14 @@
 }
 
 .nav-tab.active {
-  color: #185FA5;
-  border-bottom-color: #185FA5;
+  color: var(--color-accent-cyan);
+  border-bottom-color: var(--color-accent-cyan);
   font-weight: 500;
+}
+
+.nav-tab:focus {
+  outline: 2px solid var(--color-accent-purple);
+  outline-offset: -2px;
 }
 
 .role-selector {
@@ -109,9 +114,14 @@
 }
 
 .role-btn.active {
-  background: #185FA5;
-  color: #fff;
-  border-color: #185FA5;
+  background: var(--color-accent-purple);
+  color: var(--color-text-primary);
+  border-color: var(--color-accent-purple);
+}
+
+.role-btn:hover {
+  background: var(--color-background-secondary);
+  border-color: var(--color-accent-purple);
 }
 
 .content {

@@ -45,7 +45,7 @@ const FinanceiroPages: React.FC<FinanceiroPagesProps> = ({ tab }) => {
                     <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>joao.martins@empresa.com</div>
                   </td>
                   <td>Ana Lima</td>
-                  <td style={{ fontWeight: '500', color: '#185FA5' }}>R$ 156,00</td>
+                  <td style={{ fontWeight: '500', color: 'var(--color-accent-cyan)' }}>R$ 156,00</td>
                   <td style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>16/04/2026</td>
                   <td>
                     <div style={{ display: 'flex', gap: '6px' }}>

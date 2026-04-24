@@ -3,21 +3,41 @@
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
 
-  --color-background-primary: #ffffff;
-  --color-background-secondary: #f8f9fa;
-  --color-background-tertiary: #f1f3f4;
-  --color-background-info: #e3f2fd;
-  --color-background-warning: #fff3e0;
-  --color-background-danger: #ffebee;
+  /* Dracula Theme Colors */
+  /* Backgrounds */
+  --color-background-primary: #282A36;
+  --color-background-secondary: #44475A;
+  --color-background-tertiary: #3E4150;
+  
+  /* Text */
+  --color-text-primary: #F8F8F2;
+  --color-text-secondary: #6272A4;
+  
+  /* State Backgrounds */
+  --color-background-info: #1E3A5F;
+  --color-background-warning: #3D3318;
+  --color-background-danger: #3D1F1F;
+  --color-background-success: #1F3A1F;
+  
+  /* Text for States */
+  --color-text-info: #8BE9FD;
+  --color-text-warning: #FFB86C;
+  --color-text-success: #50FA7B;
+  --color-text-danger: #FF5555;
 
-  --color-text-primary: #202124;
-  --color-text-secondary: #5f6368;
-  --color-text-info: #1565c0;
-  --color-text-warning: #ef6c00;
-
-  --color-border-primary: #dadce0;
-  --color-border-secondary: #e8eaed;
-  --color-border-tertiary: #f1f3f4;
+  /* Borders */
+  --color-border-primary: #44475A;
+  --color-border-secondary: #6272A4;
+  --color-border-tertiary: #44475A;
+  
+  /* Dracula Accent Colors */
+  --color-accent-purple: #BD93F9;
+  --color-accent-cyan: #8BE9FD;
+  --color-accent-green: #50FA7B;
+  --color-accent-orange: #FFB86C;
+  --color-accent-red: #FF5555;
+  --color-accent-pink: #FF79C6;
+  --color-accent-yellow: #F1FA8C;
 
   --border-radius-sm: 4px;
   --border-radius-md: 8px;

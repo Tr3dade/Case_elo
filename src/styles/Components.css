@@ -52,19 +52,19 @@
 }
 
 .stat-val.blue {
-  color: #185FA5;
+  color: var(--color-accent-cyan);
 }
 
 .stat-val.amber {
-  color: #BA7517;
+  color: var(--color-accent-orange);
 }
 
 .stat-val.green {
-  color: #3B6D11;
+  color: var(--color-accent-green);
 }
 
 .stat-val.red {
-  color: #A32D2D;
+  color: var(--color-accent-red);
 }
 
 .table-wrap {
@@ -114,33 +114,33 @@ tr:hover td {
 }
 
 .badge-pending {
-  background: #FAEEDA;
-  color: #854F0B;
+  background: rgba(241, 250, 140, 0.1);
+  color: var(--color-accent-yellow);
 }
 
 .badge-review {
-  background: #E6F1FB;
-  color: #185FA5;
+  background: rgba(139, 233, 253, 0.1);
+  color: var(--color-accent-cyan);
 }
 
 .badge-approved {
-  background: #EAF3DE;
-  color: #3B6D11;
+  background: rgba(80, 250, 123, 0.1);
+  color: var(--color-accent-green);
 }
 
 .badge-rejected {
-  background: #FCEBEB;
-  color: #A32D2D;
+  background: rgba(255, 85, 85, 0.1);
+  color: var(--color-accent-red);
 }
 
 .badge-partial {
-  background: #EEEDFE;
-  color: #534AB7;
+  background: rgba(189, 147, 249, 0.1);
+  color: var(--color-accent-purple);
 }
 
 .badge-paid {
-  background: #E1F5EE;
-  color: #0F6E56;
+  background: rgba(80, 250, 123, 0.1);
+  color: var(--color-accent-green);
 }
 
 .btn {
@@ -159,14 +159,20 @@ tr:hover td {
 }
 
 .btn-primary {
-  background: #185FA5;
-  color: #fff;
-  border-color: #185FA5;
+  background: var(--color-accent-purple);
+  color: var(--color-text-primary);
+  border-color: var(--color-accent-purple);
 }
 
 .btn-primary:hover {
-  background: #0C447C;
-  border-color: #0C447C;
+  background: var(--color-accent-cyan);
+  border-color: var(--color-accent-cyan);
+  color: var(--color-background-primary);
+}
+
+.btn-primary:focus {
+  outline: 2px solid var(--color-accent-purple);
+  outline-offset: 2px;
 }
 
 .btn-sm {
@@ -175,23 +181,27 @@ tr:hover td {
 }
 
 .btn-danger {
-  background: #FCEBEB;
-  color: #A32D2D;
-  border-color: #F7C1C1;
+  background: rgba(255, 85, 85, 0.1);
+  color: var(--color-accent-red);
+  border-color: var(--color-accent-red);
 }
 
 .btn-danger:hover {
-  background: #F7C1C1;
+  background: var(--color-accent-red);
+  color: var(--color-text-primary);
+  border-color: var(--color-accent-red);
 }
 
 .btn-success {
-  background: #EAF3DE;
-  color: #3B6D11;
-  border-color: #C0DD97;
+  background: rgba(80, 250, 123, 0.1);
+  color: var(--color-accent-green);
+  border-color: var(--color-accent-green);
 }
 
 .btn-success:hover {
-  background: #C0DD97;
+  background: var(--color-accent-green);
+  color: var(--color-background-primary);
+  border-color: var(--color-accent-green);
 }
 
 .form-row {
@@ -229,7 +239,8 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: #185FA5;
+  border-color: var(--color-accent-cyan);
+  box-shadow: 0 0 0 3px rgba(139, 233, 253, 0.1);
 }
 
 .expense-row {
@@ -302,15 +313,15 @@ input:focus, select:focus, textarea:focus {
 }
 
 .tl-dot.done {
-  background: #3B6D11;
+  background: var(--color-accent-green);
 }
 
 .tl-dot.active {
-  background: #185FA5;
+  background: var(--color-accent-cyan);
 }
 
 .tl-dot.warn {
-  background: #BA7517;
+  background: var(--color-accent-orange);
 }
 
 .tl-time {
