@@ -1,0 +1,127 @@
+.topbar {
+  background: var(--color-background-primary);
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar-logo {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #185FA5;
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color-background-info);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-info);
+}
+
+.user-name {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.role-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--color-background-secondary);
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  padding: 0 24px;
+}
+
+.nav-tab {
+  padding: 10px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.nav-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.nav-tab.active {
+  color: #185FA5;
+  border-bottom-color: #185FA5;
+  font-weight: 500;
+}
+
+.role-selector {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.role-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.role-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 0.5px solid var(--color-border-secondary);
+  background: var(--color-background-primary);
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: all 0.15s;
+}
+
+.role-btn.active {
+  background: #185FA5;
+  color: #fff;
+  border-color: #185FA5;
+}
+
+.content {
+  padding: 0 24px 24px;
+}
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
