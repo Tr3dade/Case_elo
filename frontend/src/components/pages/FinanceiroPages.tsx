@@ -1,21 +1,38 @@
-import React, { useState } from 'react';
-import { sampleRequests, ReimbursementRequest } from '../../data/reimbursement';
+import React, { useState, useEffect } from 'react';
+import { api, ReimbursementRequest } from '../../services/api';
 
 interface FinanceiroPagesProps {
   tab: number;
 }
 
 const FinanceiroPages: React.FC<FinanceiroPagesProps> = ({ tab }) => {
+  const [requests, setRequests] = useState<ReimbursementRequest[]>([]);
   const [paymentDate, setPaymentDate] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<ReimbursementRequest | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadReimbursements();
+  }, []);
+
+  const loadReimbursements = async () => {
+    try {
+      const data = await api.getReimbursements();
+      setRequests(data);
+    } catch (error) {
+      console.error('Failed to load reimbursements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getPendingPayments = () => {
-    return sampleRequests.filter(req => req.status === 'Aprovado' && !req.paymentDate);
+    return requests.filter(req => req.status === 'Aprovado' && !req.paymentDate);
   };
 
   const getPaidRequests = () => {
-    return sampleRequests.filter(req => req.status === 'Pago');
+    return requests.filter(req => req.status === 'Pago');
   };
 
   const handleSchedulePayment = (request: ReimbursementRequest) => {
@@ -24,18 +41,35 @@ const FinanceiroPages: React.FC<FinanceiroPagesProps> = ({ tab }) => {
     setPaymentDate(new Date().toISOString().split('T')[0]); // Today
   };
 
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = async () => {
     if (!selectedRequest || !paymentDate) return;
 
-    selectedRequest.paymentDate = paymentDate;
-    selectedRequest.status = 'Pago';
-    selectedRequest.archivedAttachments = [...selectedRequest.attachments];
+    try {
+      const updates = {
+        paymentDate,
+        status: 'Pago' as const,
+        archivedAttachments: [...selectedRequest.attachments]
+      };
 
-    setShowScheduleModal(false);
-    setSelectedRequest(null);
+      await api.updateReimbursement(selectedRequest.id, updates);
+      await loadReimbursements();
+      setShowScheduleModal(false);
+      setSelectedRequest(null);
+    } catch (error) {
+      console.error('Failed to confirm payment:', error);
+      alert('Erro ao confirmar pagamento. Tente novamente.');
+    }
   };
 
   if (tab === 0) {
+    if (loading) {
+      return (
+        <div style={{ paddingTop: '16px' }}>
+          <div className="section-title">Carregando...</div>
+        </div>
+      );
+    }
+
     const pendingPayments = getPendingPayments();
 
     return (

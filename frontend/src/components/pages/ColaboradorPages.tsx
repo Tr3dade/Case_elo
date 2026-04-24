@@ -1,12 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { api, ReimbursementRequest, ReimbursementItem, CreateReimbursementRequest } from '../../services/api';
 import {
   costCenters,
   defaultReimbursementConfig,
   financeAdmin,
-  projects,
-  ReimbursementItem,
-  ReimbursementRequest,
-  sampleRequests
+  projects
 } from '../../data/reimbursement';
 
 interface ColaboradorPagesProps {
@@ -24,12 +22,32 @@ const initialItem = (): ReimbursementItem => ({
 });
 
 const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
-  const [requests, setRequests] = useState<ReimbursementRequest[]>(sampleRequests);
+  const [requests, setRequests] = useState<ReimbursementRequest[]>([]);
   const [items, setItems] = useState<ReimbursementItem[]>([initialItem()]);
   const [month, setMonth] = useState('2026-04');
   const [attachments, setAttachments] = useState<string[]>([]);
-  const [selectedRequestId, setSelectedRequestId] = useState<string>(sampleRequests[0]?.id || '');
+  const [selectedRequestId, setSelectedRequestId] = useState<string>('');
   const [message, setMessage] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadReimbursements();
+  }, []);
+
+  const loadReimbursements = async () => {
+    try {
+      const data = await api.getReimbursements();
+      setRequests(data);
+      if (data.length > 0) {
+        setSelectedRequestId(data[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to load reimbursements:', error);
+      setMessage('Erro ao carregar solicitações');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const attachmentsRequired = defaultReimbursementConfig.attachmentsRequired;
 
@@ -94,7 +112,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
     setAttachments(validFiles);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!month) {
       setMessage('Selecione o mês de referência.');
       return;
@@ -107,6 +125,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
       setMessage('Anexe pelo menos um comprovante para enviar a solicitação.');
       return;
     }
+
     const involvedCostCenters = Array.from(
       new Set(items.map((item) => item.costCenterId))
     );
@@ -118,36 +137,43 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
     });
     notifications.push(`Notificar ${financeAdmin.name} (${financeAdmin.email})`);
 
-    const total = items.reduce((subtotal, item) => subtotal + item.amount, 0);
-    const newRequest: ReimbursementRequest = {
-      id: `REQ-${Date.now()}`,
-      createdAt: new Date().toLocaleDateString('pt-BR'),
+    const requestData: CreateReimbursementRequest = {
       requestedBy: 'João Martins',
       month,
-      items,
+      items: items.map(item => ({
+        date: item.date,
+        type: item.type,
+        description: item.description,
+        projectId: item.projectId,
+        costCenterId: item.costCenterId,
+        amount: item.amount
+      })),
       attachments,
-      status: 'Enviado',
-      costCenterIds: involvedCostCenters,
-      notifications,
-      total,
-      history: [
-        {
-          id: `hist-${Date.now()}`,
-          timestamp: new Date().toLocaleString('pt-BR'),
-          actor: 'João Martins',
-          action: 'Solicitação enviada',
-        }
-      ]
+      costCenterIds: involvedCostCenters
     };
 
-    setRequests((current) => [newRequest, ...current]);
-    setSelectedRequestId(newRequest.id);
-    setItems([initialItem()]);
-    setAttachments([]);
-    setMessage('Solicitação enviada com sucesso. Notificações disparadas.');
+    try {
+      const newRequest = await api.createReimbursement(requestData);
+      setRequests((current) => [newRequest, ...current]);
+      setSelectedRequestId(newRequest.id);
+      setItems([initialItem()]);
+      setAttachments([]);
+      setMessage('Solicitação enviada com sucesso. Notificações disparadas.');
+    } catch (error) {
+      console.error('Failed to create reimbursement:', error);
+      setMessage('Erro ao enviar solicitação. Tente novamente.');
+    }
   };
 
   if (tab === 0) {
+    if (loading) {
+      return (
+        <div style={{ paddingTop: '16px' }}>
+          <div className="section-title">Carregando...</div>
+        </div>
+      );
+    }
+
     return (
       <div style={{ paddingTop: '16px' }}>
         <div className="section-title">Minhas Solicitações</div>
@@ -358,7 +384,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
               <div className="card">
                 <div className="card-title">Notificações geradas</div>
                 <div className="timeline">
-                  {selectedRequest.notifications.map((note, index) => (
+                  {selectedRequest.notifications?.map((note, index) => (
                     <div key={index} className="tl-item">
                       <div className={`tl-dot ${index === 0 ? 'active' : ''}`}></div>
                       <div className="tl-time">{index === 0 ? 'Agora' : 'Em breve'}</div>

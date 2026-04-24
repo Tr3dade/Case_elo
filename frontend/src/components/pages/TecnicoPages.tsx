@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { sampleRequests, ReimbursementRequest, projects, costCenters } from '../../data/reimbursement';
+import React, { useState, useEffect } from 'react';
+import { api, ReimbursementRequest } from '../../services/api';
+import { projects, costCenters } from '../../data/reimbursement';
 
 interface TecnicoPagesProps {
   tab: number;
@@ -12,8 +13,22 @@ interface ValidationResult {
 }
 
 const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
+  const [requests, setRequests] = useState<ReimbursementRequest[]>([]);
   const [validationResults, setValidationResults] = useState<{ [requestId: string]: ValidationResult }>({});
   const [comments, setComments] = useState<{ [requestId: string]: string }>({});
+
+  useEffect(() => {
+    loadReimbursements();
+  }, []);
+
+  const loadReimbursements = async () => {
+    try {
+      const data = await api.getReimbursements();
+      setRequests(data);
+    } catch (error) {
+      console.error('Failed to load reimbursements:', error);
+    }
+  };
 
   const validateRequest = (request: ReimbursementRequest): ValidationResult => {
     const errors: string[] = [];
@@ -104,7 +119,7 @@ const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
   };
 
   const getPendingRequests = () => {
-    return sampleRequests.filter(req => req.status === 'Em análise');
+    return requests.filter(req => req.status === 'Em análise');
   };
 
   if (tab === 0) {

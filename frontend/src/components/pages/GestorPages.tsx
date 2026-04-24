@@ -1,19 +1,37 @@
-﻿import React, { useState } from 'react';
-import { sampleRequests, ReimbursementRequest, projects, costCenters, ActionHistory } from '../../data/reimbursement';
+﻿import React, { useState, useEffect } from 'react';
+import { api, ReimbursementRequest } from '../../services/api';
+import { projects, costCenters } from '../../data/reimbursement';
 
 interface GestorPagesProps {
   tab: number;
 }
 
 const GestorPages: React.FC<GestorPagesProps> = ({ tab }) => {
+  const [requests, setRequests] = useState<ReimbursementRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<ReimbursementRequest | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [actionComments, setActionComments] = useState('');
   const [itemDecisions, setItemDecisions] = useState<{ [itemId: string]: 'Aprovado' | 'Rejeitado' }>({});
+  const [loading, setLoading] = useState(true);
 
-  const getPendingRequests = () => sampleRequests.filter(req => req.status === 'Em análise');
-  const getApprovedRequests = () => sampleRequests.filter(req => req.status === 'Aprovado');
-  const getRejectedRequests = () => sampleRequests.filter(req => req.status === 'Rejeitado');
+  useEffect(() => {
+    loadReimbursements();
+  }, []);
+
+  const loadReimbursements = async () => {
+    try {
+      const data = await api.getReimbursements();
+      setRequests(data);
+    } catch (error) {
+      console.error('Failed to load reimbursements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPendingRequests = () => requests.filter(req => req.status === 'Em análise');
+  const getApprovedRequests = () => requests.filter(req => req.status === 'Aprovado');
+  const getRejectedRequests = () => requests.filter(req => req.status === 'Rejeitado');
 
   const handleViewRequest = (request: ReimbursementRequest) => {
     setSelectedRequest(request);
@@ -22,30 +40,41 @@ const GestorPages: React.FC<GestorPagesProps> = ({ tab }) => {
     setItemDecisions({});
   };
 
-  const handleApproveAll = (request?: ReimbursementRequest) => {
+  const handleApproveAll = async (request?: ReimbursementRequest) => {
     const req = request ?? selectedRequest;
     if (!req) return;
 
-    const newHistory: ActionHistory = {
-      id: `hist-${Date.now()}`,
-      timestamp: new Date().toLocaleString('pt-BR'),
-      actor: 'Ana Lima',
-      action: 'Aprovado totalmente pelo gestor',
-      comments: actionComments || undefined,
-    };
+    try {
+      const updates = {
+        status: 'Aprovado' as const,
+        items: req.items.map(item => ({
+          ...item,
+          status: 'Aprovado' as const,
+          rejectionReason: undefined
+        })),
+        history: [
+          ...req.history,
+          {
+            id: `hist-${Date.now()}`,
+            timestamp: new Date().toLocaleString('pt-BR'),
+            actor: 'Ana Lima',
+            action: 'Aprovado totalmente pelo gestor',
+            comments: actionComments || undefined,
+          }
+        ]
+      };
 
-    req.status = 'Aprovado';
-    req.items.forEach(item => {
-      item.status = 'Aprovado';
-      delete item.rejectionReason;
-    });
-    req.history.push(newHistory);
-
-    setShowModal(false);
-    setSelectedRequest(null);
+      await api.updateReimbursement(req.id, updates);
+      await loadReimbursements();
+      setShowModal(false);
+      setSelectedRequest(null);
+    } catch (error) {
+      console.error('Failed to approve reimbursement:', error);
+      alert('Erro ao aprovar solicitação. Tente novamente.');
+    }
   };
 
-  const handlePartialApproval = () => {
+  const handlePartialApproval = async () => {
     if (!selectedRequest) return;
 
     const approvedItems = Object.keys(itemDecisions).filter(id => itemDecisions[id] === 'Aprovado');
@@ -56,79 +85,118 @@ const GestorPages: React.FC<GestorPagesProps> = ({ tab }) => {
       return;
     }
 
-    const newHistory: ActionHistory = {
-      id: `hist-${Date.now()}`,
-      timestamp: new Date().toLocaleString('pt-BR'),
-      actor: 'Ana Lima',
-      action: 'Aprovação parcial pelo gestor',
-      comments: actionComments || undefined,
-    };
-
-    selectedRequest.items.forEach(item => {
-      const decision = itemDecisions[item.id];
-      if (decision) {
-        item.status = decision;
-        if (decision === 'Rejeitado') {
-          item.rejectionReason = 'Rejeitado pelo gestor';
-        } else {
-          delete item.rejectionReason;
+    try {
+      const updatedItems = selectedRequest.items.map(item => {
+        const decision = itemDecisions[item.id];
+        if (decision) {
+          return {
+            ...item,
+            status: decision,
+            rejectionReason: decision === 'Rejeitado' ? 'Rejeitado pelo gestor' : undefined
+          };
         }
-      }
-    });
+        return item;
+      });
 
-    const allApproved = selectedRequest.items.every(item => item.status === 'Aprovado');
-    selectedRequest.status = allApproved ? 'Aprovado' : 'Aprovado';
-    selectedRequest.history.push(newHistory);
+      const allApproved = updatedItems.every(item => item.status === 'Aprovado');
 
-    setShowModal(false);
-    setSelectedRequest(null);
+      const updates = {
+        status: allApproved ? 'Aprovado' as const : 'Aprovado' as const,
+        items: updatedItems,
+        history: [
+          ...selectedRequest.history,
+          {
+            id: `hist-${Date.now()}`,
+            timestamp: new Date().toLocaleString('pt-BR'),
+            actor: 'Ana Lima',
+            action: 'Aprovação parcial pelo gestor',
+            comments: actionComments || undefined,
+          }
+        ]
+      };
+
+      await api.updateReimbursement(selectedRequest.id, updates);
+      await loadReimbursements();
+      setShowModal(false);
+      setSelectedRequest(null);
+    } catch (error) {
+      console.error('Failed to update reimbursement:', error);
+      alert('Erro ao processar aprovação parcial. Tente novamente.');
+    }
   };
 
-  const handleReject = (request?: ReimbursementRequest) => {
+  const handleReject = async (request?: ReimbursementRequest) => {
     const req = request ?? selectedRequest;
     if (!req) return;
 
-    const newHistory: ActionHistory = {
-      id: `hist-${Date.now()}`,
-      timestamp: new Date().toLocaleString('pt-BR'),
-      actor: 'Ana Lima',
-      action: 'Rejeitado pelo gestor',
-      comments: actionComments || undefined,
-    };
+    try {
+      const updates = {
+        status: 'Rejeitado' as const,
+        items: req.items.map(item => ({
+          ...item,
+          status: 'Rejeitado' as const,
+          rejectionReason: 'Solicitação rejeitada pelo gestor'
+        })),
+        history: [
+          ...req.history,
+          {
+            id: `hist-${Date.now()}`,
+            timestamp: new Date().toLocaleString('pt-BR'),
+            actor: 'Ana Lima',
+            action: 'Rejeitado pelo gestor',
+            comments: actionComments || undefined,
+          }
+        ]
+      };
 
-    req.status = 'Rejeitado';
-    req.items.forEach(item => {
-      item.status = 'Rejeitado';
-      item.rejectionReason = 'Solicitação rejeitada pelo gestor';
-    });
-    req.history.push(newHistory);
-
-    setShowModal(false);
-    setSelectedRequest(null);
+      await api.updateReimbursement(req.id, updates);
+      await loadReimbursements();
+      setShowModal(false);
+      setSelectedRequest(null);
+    } catch (error) {
+      console.error('Failed to reject reimbursement:', error);
+      alert('Erro ao rejeitar solicitação. Tente novamente.');
+    }
   };
 
-  const handleRequestAdjustments = () => {
+  const handleRequestAdjustments = async () => {
     if (!selectedRequest) return;
 
-    const newHistory: ActionHistory = {
-      id: `hist-${Date.now()}`,
-      timestamp: new Date().toLocaleString('pt-BR'),
-      actor: 'Ana Lima',
-      action: 'Ajustes solicitados pelo gestor',
-      comments: actionComments,
-    };
+    try {
+      const updates = {
+        status: 'Aguardando ajustes' as const,
+        history: [
+          ...selectedRequest.history,
+          {
+            id: `hist-${Date.now()}`,
+            timestamp: new Date().toLocaleString('pt-BR'),
+            actor: 'Ana Lima',
+            action: 'Ajustes solicitados pelo gestor',
+            comments: actionComments,
+          }
+        ]
+      };
 
-    selectedRequest.status = 'Aguardando ajustes';
-    selectedRequest.history.push(newHistory);
-
-    setShowModal(false);
-    setSelectedRequest(null);
+      await api.updateReimbursement(selectedRequest.id, updates);
+      await loadReimbursements();
+      setShowModal(false);
+      setSelectedRequest(null);
+    } catch (error) {
+      console.error('Failed to request adjustments:', error);
+      alert('Erro ao solicitar ajustes. Tente novamente.');
+    }
   };
 
   return (
     <>
       {tab === 0 && (
-        <div style={{ paddingTop: '16px' }}>
+        <>
+          {loading ? (
+            <div style={{ paddingTop: '16px' }}>
+              <div className="section-title">Carregando...</div>
+            </div>
+          ) : (
+            <div style={{ paddingTop: '16px' }}>
           <div className="section-title">Pendentes de Aprovação</div>
           <div className="section-sub">Solicitações que aguardam sua avaliação</div>
           <div className="stats-grid">
@@ -200,6 +268,8 @@ const GestorPages: React.FC<GestorPagesProps> = ({ tab }) => {
             </div>
           )}
         </div>
+          )}
+        </>
       )}
 
       {tab === 1 && (
