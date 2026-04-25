@@ -21,6 +21,20 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/reimbursements', reimbursementRoutes);
 
+// Test Supabase connection
+app.get('/api/test-supabase', async (req, res) => {
+  try {
+    const { supabase } = await import('./services/supabase');
+    const { data, error } = await supabase.from('reimbursements').select('count').limit(1);
+    if (error) {
+      return res.status(500).json({ error: error.message, details: error });
+    }
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to connect to Supabase', details: err });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
