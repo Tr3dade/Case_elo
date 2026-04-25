@@ -3,41 +3,43 @@
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
 
-  /* Dracula Theme Colors */
-  /* Backgrounds */
-  --color-background-primary: #282A36;
-  --color-background-secondary: #44475A;
-  --color-background-tertiary: #3E4150;
-  
-  /* Text */
-  --color-text-primary: #F8F8F2;
-  --color-text-secondary: #6272A4;
-  
-  /* State Backgrounds */
-  --color-background-info: #1E3A5F;
-  --color-background-warning: #3D3318;
-  --color-background-danger: #3D1F1F;
-  --color-background-success: #1F3A1F;
-  
-  /* Text for States */
-  --color-text-info: #8BE9FD;
-  --color-text-warning: #FFB86C;
-  --color-text-success: #50FA7B;
-  --color-text-danger: #FF5555;
+  /* New Color Palette */
+  --primary-color: #5DADE2;    /* Azul: Botões e Links principais */
+  --bg-dark: #121212;          /* Preto: Seções de destaque ou Footer */
+  --bg-light: #FFFFFF;         /* Branco: Fundo principal de leitura */
+  --text-main: #333333;        /* Cinza Escuro: Títulos e corpo de texto */
+  --text-muted: #757575;       /* Cinza Médio: Placeholders e legendas */
+  --border-color: #E0E0E0;     /* Cinza Claro: Divisores e bordas de inputs */
 
-  /* Borders */
-  --color-border-primary: #44475A;
-  --color-border-secondary: #6272A4;
-  --color-border-tertiary: #44475A;
+  /* Legacy color variables for compatibility */
+  --color-background-primary: var(--bg-dark);
+  --color-background-secondary: #f5f5f5;
+  --color-background-tertiary: var(--bg-light);
   
-  /* Dracula Accent Colors */
-  --color-accent-purple: #BD93F9;
-  --color-accent-cyan: #8BE9FD;
-  --color-accent-green: #50FA7B;
-  --color-accent-orange: #FFB86C;
-  --color-accent-red: #FF5555;
-  --color-accent-pink: #FF79C6;
-  --color-accent-yellow: #F1FA8C;
+  --color-text-primary: var(--text-main);
+  --color-text-secondary: var(--text-muted);
+  
+  --color-background-info: #e3f2fd;
+  --color-background-warning: #fff3e0;
+  --color-background-danger: #ffebee;
+  --color-background-success: #e8f5e9;
+  
+  --color-text-info: #1976d2;
+  --color-text-warning: #f57c00;
+  --color-text-success: #388e3c;
+  --color-text-danger: #d32f2f;
+
+  --color-border-primary: var(--border-color);
+  --color-border-secondary: var(--border-color);
+  --color-border-tertiary: var(--border-color);
+  
+  --color-accent-purple: var(--primary-color);
+  --color-accent-cyan: var(--primary-color);
+  --color-accent-green: #4caf50;
+  --color-accent-orange: #ff9800;
+  --color-accent-red: #f44336;
+  --color-accent-pink: #e91e63;
+  --color-accent-yellow: #fbc02d;
 
   --border-radius-sm: 4px;
   --border-radius-md: 8px;
