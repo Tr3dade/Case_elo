@@ -13,7 +13,13 @@ import { User } from '../../data/users';
 interface ColaboradorPagesProps {
   tab: number;
   user: User;
+  onTabChange: (tabIndex: number) => void;
 }
+
+const parseDateString = (dateString: string) => {
+  const [day, month, year] = dateString.split('/').map(Number);
+  return new Date(year, month - 1, day);
+};
 
 const initialItem = (): ReimbursementItem => ({
   id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -25,12 +31,12 @@ const initialItem = (): ReimbursementItem => ({
   amount: 0
 });
 
-const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user }) => {
+const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user, onTabChange }) => {
   const [requests, setRequests] = useState<ReimbursementRequest[]>(sampleRequests);
   const [items, setItems] = useState<ReimbursementItem[]>([initialItem()]);
   const [month, setMonth] = useState('2026-04');
   const [attachments, setAttachments] = useState<string[]>([]);
-  const [selectedRequestId, setSelectedRequestId] = useState<string>(sampleRequests[0]?.id || '');
+  const [selectedRequestId, setSelectedRequestId] = useState<string>(() => sampleRequests.find((request) => request.requestedBy === user.name)?.id || sampleRequests[0]?.id || '');
   const [message, setMessage] = useState<string>('');
   const [generalNotes, setGeneralNotes] = useState<string>('');
   const [selectedCostCenter, setSelectedCostCenter] = useState<number>(costCenters[0].id);
@@ -45,23 +51,39 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user }) => {
     project: 'Todos'
   });
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState<number>(tab);
-
-  useEffect(() => {
-    setCurrentTab(tab);
-  }, [tab]);
+  const [showAllRequests, setShowAllRequests] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
 
   const attachmentsRequired = defaultReimbursementConfig.attachmentsRequired;
 
-  const selectedRequest = requests.find((request) => request.id === selectedRequestId) ?? requests[0];
+  const userRequests = useMemo(
+    () => requests.filter((request) => request.requestedBy === user.name),
+    [requests, user.name]
+  );
+
+  const sortedUserRequests = useMemo(
+    () => [...userRequests].sort((a, b) => parseDateString(b.createdAt).getTime() - parseDateString(a.createdAt).getTime()),
+    [userRequests]
+  );
+
+  const latestRequests = sortedUserRequests.slice(0, 5);
+
+  const selectedRequest = userRequests.find((request) => request.id === selectedRequestId) ?? userRequests[0];
+
+  useEffect(() => {
+    if (!userRequests.some((request) => request.id === selectedRequestId)) {
+      setSelectedRequestId(userRequests[0]?.id || '');
+    }
+  }, [userRequests, selectedRequestId]);
 
   const requestStats = useMemo(() => {
-    const total = requests.reduce((sum, request) => sum + request.total, 0);
-    const approved = requests.filter((request) => request.status === 'Aprovado').length;
-    const pending = requests.filter((request) => request.status === 'Enviado' || request.status === 'Em análise').length;
-    const rejected = requests.filter((request) => request.status === 'Rejeitado').length;
+    const total = userRequests.reduce((sum, request) => sum + request.total, 0);
+    const approved = userRequests.filter((request) => request.status === 'Aprovado').length;
+    const pending = userRequests.filter((request) => request.status === 'Em análise').length;
+    const rejected = userRequests.filter((request) => request.status === 'Rejeitado').length;
     return { total, approved, pending, rejected };
-  }, [requests]);
+  }, [userRequests]);
 
   const handleItemChange = (
     index: number,
@@ -200,6 +222,8 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user }) => {
       setRequests((current) => [newRequest, ...current]);
       setSelectedRequestId(newRequest.id);
       setMessage('Solicitação enviada com sucesso. Status: Em análise.');
+      setShowAllRequests(true);
+      onTabChange(0);
     }
 
     setItems([initialItem()]);
@@ -218,6 +242,16 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user }) => {
       dateTo: filterDateTo,
       project: filterProject
     });
+    setShowAllRequests(true);
+    setPage(1);
+  };
+
+  const handleCancel = () => {
+    setItems([initialItem()]);
+    setAttachments([]);
+    setGeneralNotes('');
+    setEditingRequestId(null);
+    setMessage('');
   };
 
   const handleEditRequest = (requestId: string) => {
@@ -229,24 +263,25 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user }) => {
       setGeneralNotes('');
       setSelectedCostCenter(request.costCenterIds[0] || costCenters[0].id);
       setMonth(request.month);
-      setCurrentTab(1); // Mudar para aba "Nova Solicitação"
+      onTabChange(1);
       setMessage('');
     }
   };
 
   const filteredRequests = useMemo(() => {
-    return requests.filter((request) => {
-      // Filtrar apenas solicitações do usuário logado (mocado como João Silva)
-      if (request.requestedBy !== user.name) return false;
+    return userRequests.filter((request) => {
       if (appliedFilters.status !== 'Todos' && request.status !== appliedFilters.status) return false;
       if (appliedFilters.project !== 'Todos' && !request.items.some(item => item.projectId === appliedFilters.project)) return false;
-      if (appliedFilters.dateFrom && new Date(request.createdAt) < new Date(appliedFilters.dateFrom)) return false;
-      if (appliedFilters.dateTo && new Date(request.createdAt) > new Date(appliedFilters.dateTo)) return false;
+      if (appliedFilters.dateFrom && parseDateString(request.createdAt) < new Date(appliedFilters.dateFrom)) return false;
+      if (appliedFilters.dateTo && parseDateString(request.createdAt) > new Date(appliedFilters.dateTo)) return false;
       return true;
     });
-  }, [requests, appliedFilters, user.name]);
+  }, [userRequests, appliedFilters]);
 
-  if (currentTab === 0) {
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / pageSize));
+  const paginatedRequests = filteredRequests.slice((page - 1) * pageSize, page * pageSize);
+
+  if (tab === 0) {
     return (
       <div style={{ paddingTop: '16px' }}>
         <div className="section-title">Minhas Solicitações</div>
@@ -353,7 +388,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user }) => {
     );
   }
 
-  if (currentTab === 1) {
+  if (tab === 1) {
     return (
       <div style={{ paddingTop: '16px' }}>
         <div className="section-title">Nova Solicitação de Reembolso</div>
@@ -368,7 +403,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user }) => {
           <div className="form-row">
             <div className="form-group">
               <label>Funcionário</label>
-              <input type="text" value="João Silva" disabled style={{ opacity: '0.6' }} />
+              <input type="text" value={user.name} disabled style={{ opacity: '0.6' }} />
             </div>
             <div className="form-group">
               <label>Mês de referência</label>
@@ -468,7 +503,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user }) => {
     );
   }
 
-  if (currentTab === 2) {
+  if (tab === 2) {
     return (
       <div style={{ paddingTop: '16px' }}>
         <div className="section-title">Detalhes da Solicitação</div>
