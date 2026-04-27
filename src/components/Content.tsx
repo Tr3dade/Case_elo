@@ -3,17 +3,19 @@ import ColaboradorPages from './pages/ColaboradorPages';
 import GestorPages from './pages/GestorPages';
 import TecnicoPages from './pages/TecnicoPages';
 import FinanceiroPages from './pages/FinanceiroPages';
+import { User } from '../data/users';
 
 interface ContentProps {
   role: string;
   tab: number;
+  user: User;
 }
 
-const Content: React.FC<ContentProps> = ({ role, tab }) => {
+const Content: React.FC<ContentProps> = ({ role, tab, user }) => {
   const renderContent = () => {
     switch (role) {
       case 'colaborador':
-        return <ColaboradorPages tab={tab} />;
+        return <ColaboradorPages tab={tab} user={user} />;
       case 'gestor':
         return <GestorPages tab={tab} />;
       case 'tecnico':

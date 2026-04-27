@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   costCenters,
   defaultReimbursementConfig,
@@ -8,9 +8,11 @@ import {
   ReimbursementRequest,
   sampleRequests
 } from '../../data/reimbursement';
+import { User } from '../../data/users';
 
 interface ColaboradorPagesProps {
   tab: number;
+  user: User;
 }
 
 const initialItem = (): ReimbursementItem => ({
@@ -23,7 +25,7 @@ const initialItem = (): ReimbursementItem => ({
   amount: 0
 });
 
-const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
+const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user }) => {
   const [requests, setRequests] = useState<ReimbursementRequest[]>(sampleRequests);
   const [items, setItems] = useState<ReimbursementItem[]>([initialItem()]);
   const [month, setMonth] = useState('2026-04');
@@ -36,8 +38,18 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
   const [filterDateFrom, setFilterDateFrom] = useState<string>('');
   const [filterDateTo, setFilterDateTo] = useState<string>('');
   const [filterProject, setFilterProject] = useState<string>('Todos');
+  const [appliedFilters, setAppliedFilters] = useState({
+    status: 'Todos',
+    dateFrom: '',
+    dateTo: '',
+    project: 'Todos'
+  });
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<number>(tab);
+
+  useEffect(() => {
+    setCurrentTab(tab);
+  }, [tab]);
 
   const attachmentsRequired = defaultReimbursementConfig.attachmentsRequired;
 
@@ -152,7 +164,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
           {
             id: `hist-${Date.now()}`,
             timestamp: new Date().toLocaleString('pt-BR'),
-            actor: 'João Silva',
+            actor: user.name,
             action: 'Solicitação reenviada após ajustes',
           }
         ]
@@ -167,7 +179,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
       const newRequest: ReimbursementRequest = {
         id: `REQ-${Date.now()}`,
         createdAt: new Date().toLocaleDateString('pt-BR'),
-        requestedBy: 'João Silva',
+        requestedBy: user.name,
         month,
         items,
         attachments,
@@ -179,7 +191,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
           {
             id: `hist-${Date.now()}`,
             timestamp: new Date().toLocaleString('pt-BR'),
-            actor: 'João Silva',
+            actor: user.name,
             action: 'Solicitação enviada',
           }
         ]
@@ -199,6 +211,15 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
     setMessage('Rascunho salvo com sucesso.');
   };
 
+  const handleApplyFilters = () => {
+    setAppliedFilters({
+      status: filterStatus,
+      dateFrom: filterDateFrom,
+      dateTo: filterDateTo,
+      project: filterProject
+    });
+  };
+
   const handleEditRequest = (requestId: string) => {
     const request = requests.find(r => r.id === requestId);
     if (request) {
@@ -215,13 +236,15 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
 
   const filteredRequests = useMemo(() => {
     return requests.filter((request) => {
-      if (filterStatus !== 'Todos' && request.status !== filterStatus) return false;
-      if (filterProject !== 'Todos' && !request.items.some(item => item.projectId === filterProject)) return false;
-      if (filterDateFrom && new Date(request.createdAt) < new Date(filterDateFrom)) return false;
-      if (filterDateTo && new Date(request.createdAt) > new Date(filterDateTo)) return false;
+      // Filtrar apenas solicitações do usuário logado (mocado como João Silva)
+      if (request.requestedBy !== user.name) return false;
+      if (appliedFilters.status !== 'Todos' && request.status !== appliedFilters.status) return false;
+      if (appliedFilters.project !== 'Todos' && !request.items.some(item => item.projectId === appliedFilters.project)) return false;
+      if (appliedFilters.dateFrom && new Date(request.createdAt) < new Date(appliedFilters.dateFrom)) return false;
+      if (appliedFilters.dateTo && new Date(request.createdAt) > new Date(appliedFilters.dateTo)) return false;
       return true;
     });
-  }, [requests, filterStatus, filterProject, filterDateFrom, filterDateTo]);
+  }, [requests, appliedFilters, user.name]);
 
   if (currentTab === 0) {
     return (
@@ -260,14 +283,6 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
               </select>
             </div>
             <div className="form-group">
-              <label>Data de (início)</label>
-              <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>Data até (fim)</label>
-              <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} />
-            </div>
-            <div className="form-group">
               <label>Projeto</label>
               <select value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
                 <option>Todos</option>
@@ -276,6 +291,19 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
                 ))}
               </select>
             </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Data início</label>
+              <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Data fim</label>
+              <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} />
+            </div>
+          </div>
+          <div className="action-row">
+            <button className="btn btn-primary" onClick={handleApplyFilters}>Filtrar</button>
           </div>
         </div>
         <div className="card">

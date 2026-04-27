@@ -429,5 +429,270 @@ export const sampleRequests: ReimbursementRequest[] = [
       }
     ],
     paymentDate: '30/10/2025'
+  },
+  // Solicitações de Maria Costa
+  {
+    id: '2024-026',
+    createdAt: '10/04/2026',
+    requestedBy: 'Maria Costa',
+    month: '2026-04',
+    items: [
+      {
+        id: 'item-11',
+        date: '2026-04-08',
+        type: 'Transporte',
+        description: 'Taxi para visita técnica',
+        projectId: 'gamma',
+        costCenterId: 5102,
+        amount: 120.00,
+        status: 'Aprovado'
+      }
+    ],
+    attachments: ['recibo_taxi_maria.pdf'],
+    status: 'Aprovado',
+    costCenterIds: [5102],
+    notifications: [],
+    total: 120.00,
+    history: [
+      {
+        id: 'hist-22',
+        timestamp: '10/04/2026 14:30',
+        actor: 'Maria Costa',
+        action: 'Solicitação enviada'
+      },
+      {
+        id: 'hist-23',
+        timestamp: '12/04/2026 10:15',
+        actor: 'Fernanda Souza',
+        action: 'Validado pelo técnico administrativo'
+      },
+      {
+        id: 'hist-24',
+        timestamp: '13/04/2026 16:45',
+        actor: 'Paulo Lima',
+        action: 'Aprovado pelo gestor'
+      }
+    ],
+    paymentDate: '18/04/2026'
+  },
+  {
+    id: '2024-027',
+    createdAt: '25/03/2026',
+    requestedBy: 'Maria Costa',
+    month: '2026-03',
+    items: [
+      {
+        id: 'item-12',
+        date: '2026-03-20',
+        type: 'Alimentação',
+        description: 'Jantar com equipe',
+        projectId: 'beta',
+        costCenterId: 3308,
+        amount: 85.00,
+        status: 'Em análise'
+      }
+    ],
+    attachments: ['nota_jantar.pdf'],
+    status: 'Em análise',
+    costCenterIds: [3308],
+    notifications: [
+      'Gestor Paulo Lima notificado para centro de custo 3308'
+    ],
+    total: 85.00,
+    history: [
+      {
+        id: 'hist-25',
+        timestamp: '25/03/2026 19:00',
+        actor: 'Maria Costa',
+        action: 'Solicitação enviada'
+      }
+    ]
+  },
+  // Solicitações de Carlos Santos
+  {
+    id: '2024-028',
+    createdAt: '05/04/2026',
+    requestedBy: 'Carlos Santos',
+    month: '2026-04',
+    items: [
+      {
+        id: 'item-13',
+        date: '2026-04-03',
+        type: 'Material',
+        description: 'Papelaria para escritório',
+        projectId: 'alpha',
+        costCenterId: 4521,
+        amount: 67.50,
+        status: 'Pago'
+      },
+      {
+        id: 'item-14',
+        date: '2026-04-04',
+        type: 'Transporte',
+        description: 'Ônibus intermunicipal',
+        projectId: 'alpha',
+        costCenterId: 4521,
+        amount: 45.00,
+        status: 'Pago'
+      }
+    ],
+    attachments: ['recibos_carlos.pdf'],
+    status: 'Pago',
+    costCenterIds: [4521],
+    notifications: [],
+    total: 112.50,
+    history: [
+      {
+        id: 'hist-26',
+        timestamp: '05/04/2026 11:20',
+        actor: 'Carlos Santos',
+        action: 'Solicitação enviada'
+      },
+      {
+        id: 'hist-27',
+        timestamp: '07/04/2026 09:45',
+        actor: 'Fernanda Souza',
+        action: 'Validado pelo técnico administrativo'
+      },
+      {
+        id: 'hist-28',
+        timestamp: '08/04/2026 14:30',
+        actor: 'Paulo Lima',
+        action: 'Aprovado pelo gestor'
+      },
+      {
+        id: 'hist-29',
+        timestamp: '12/04/2026 10:00',
+        actor: 'Roberto Almeida',
+        action: 'Pagamento processado'
+      }
+    ],
+    paymentDate: '12/04/2026'
+  },
+  {
+    id: '2024-029',
+    createdAt: '15/02/2026',
+    requestedBy: 'Carlos Santos',
+    month: '2026-02',
+    items: [
+      {
+        id: 'item-15',
+        date: '2026-02-12',
+        type: 'Refeição',
+        description: 'Almoço de trabalho',
+        projectId: 'beta',
+        costCenterId: 3308,
+        amount: 32.00,
+        status: 'Rejeitado'
+      }
+    ],
+    attachments: ['nota_restaurante_carlos.pdf'],
+    status: 'Rejeitado',
+    costCenterIds: [3308],
+    notifications: [],
+    total: 32.00,
+    history: [
+      {
+        id: 'hist-30',
+        timestamp: '15/02/2026 13:30',
+        actor: 'Carlos Santos',
+        action: 'Solicitação enviada'
+      },
+      {
+        id: 'hist-31',
+        timestamp: '17/02/2026 11:15',
+        actor: 'Fernanda Souza',
+        action: 'Validado pelo técnico administrativo'
+      },
+      {
+        id: 'hist-32',
+        timestamp: '18/02/2026 15:20',
+        actor: 'Paulo Lima',
+        action: 'Rejeitado pelo gestor',
+        comments: 'Valor abaixo do limite mínimo para reembolso'
+      }
+    ]
+  },
+  // Solicitações de Ana Oliveira
+  {
+    id: '2024-030',
+    createdAt: '20/04/2026',
+    requestedBy: 'Ana Oliveira',
+    month: '2026-04',
+    items: [
+      {
+        id: 'item-16',
+        date: '2026-04-18',
+        type: 'Transporte',
+        description: 'Uber para reunião externa',
+        projectId: 'alpha',
+        costCenterId: 4521,
+        amount: 78.50,
+        status: 'Aguardando ajustes'
+      }
+    ],
+    attachments: ['comprovante_uber_ana.pdf'],
+    status: 'Aguardando ajustes',
+    costCenterIds: [4521],
+    notifications: [],
+    total: 78.50,
+    history: [
+      {
+        id: 'hist-33',
+        timestamp: '20/04/2026 16:45',
+        actor: 'Ana Oliveira',
+        action: 'Solicitação enviada'
+      },
+      {
+        id: 'hist-34',
+        timestamp: '22/04/2026 10:30',
+        actor: 'Fernanda Souza',
+        action: 'Solicitado ajustes ao colaborador',
+        comments: 'Falta especificar o motivo da viagem'
+      }
+    ]
+  },
+  {
+    id: '2024-031',
+    createdAt: '08/03/2026',
+    requestedBy: 'Ana Oliveira',
+    month: '2026-03',
+    items: [
+      {
+        id: 'item-17',
+        date: '2026-03-05',
+        type: 'Gráfica',
+        description: 'Impressão de apresentações',
+        projectId: 'gamma',
+        costCenterId: 5102,
+        amount: 150.00,
+        status: 'Aprovado'
+      }
+    ],
+    attachments: ['orcamento_grafica_ana.pdf'],
+    status: 'Aprovado',
+    costCenterIds: [5102],
+    notifications: [],
+    total: 150.00,
+    history: [
+      {
+        id: 'hist-35',
+        timestamp: '08/03/2026 14:15',
+        actor: 'Ana Oliveira',
+        action: 'Solicitação enviada'
+      },
+      {
+        id: 'hist-36',
+        timestamp: '10/03/2026 11:45',
+        actor: 'Fernanda Souza',
+        action: 'Validado pelo técnico administrativo'
+      },
+      {
+        id: 'hist-37',
+        timestamp: '11/03/2026 16:20',
+        actor: 'Paulo Lima',
+        action: 'Aprovado pelo gestor'
+      }
+    ]
   }
 ];
