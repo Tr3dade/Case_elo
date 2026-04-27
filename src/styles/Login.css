@@ -1,14 +1,14 @@
 :root {
-  --login-bg-dark: #121212;
-  --login-bg-darker: #0a0a0a;
-  --login-panel: #FFFFFF;
-  --login-panel-soft: #f5f5f5;
-  --login-input: #f5f5f5;
-  --login-border: #E0E0E0;
-  --login-text: #333333;
-  --login-text-secondary: #757575;
-  --login-accent: #5DADE2;
-  --login-accent-dark: #2c5aa0;
+  --login-bg-dark: #f4f6f9;
+  --login-bg-darker: #eaecf3;
+  --login-panel: #ffffff;
+  --login-panel-soft: #f0f2f7;
+  --login-input: #f0f2f7;
+  --login-border: #e5e7eb;
+  --login-text: #111827;
+  --login-text-secondary: #4b5563;
+  --login-accent: #2563eb;
+  --login-accent-dark: #1d4ed8;
 }
 
 .login-page {
@@ -185,6 +185,14 @@
   background: #eff6ff;
   color: var(--login-text);
 }
+
+.error-message {
+  color: #dc2626;
+  font-size: 14px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
 .login-footer {
   display: flex;
   justify-content: center;

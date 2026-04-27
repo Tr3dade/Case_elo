@@ -1,19 +1,24 @@
 import { useState } from 'react';
 import '../styles/Login.css';
+import { users, User } from '../data/users';
 
 interface LoginProps {
-  onLogin: () => void;
+  onLogin: (user: User) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [username, setUsername] = useState('bob');
   const [password, setPassword] = useState('');
   const [keepLogged, setKeepLogged] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (username.trim() && password.trim()) {
-      onLogin();
+    const user = users.find(u => u.username === username && u.password === password);
+    if (user) {
+      onLogin(user);
+    } else {
+      setError('Usuário ou senha inválidos');
     }
   };
 
@@ -33,6 +38,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </div>
 
           <form className="login-form" onSubmit={handleSubmit}>
+            {error && <div className="error-message">{error}</div>}
             <label className="login-label">
               Seu usuário
               <input
