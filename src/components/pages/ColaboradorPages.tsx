@@ -30,6 +30,14 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
   const [attachments, setAttachments] = useState<string[]>([]);
   const [selectedRequestId, setSelectedRequestId] = useState<string>(sampleRequests[0]?.id || '');
   const [message, setMessage] = useState<string>('');
+  const [generalNotes, setGeneralNotes] = useState<string>('');
+  const [selectedCostCenter, setSelectedCostCenter] = useState<number>(costCenters[0].id);
+  const [filterStatus, setFilterStatus] = useState<string>('Todos');
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
+  const [filterProject, setFilterProject] = useState<string>('Todos');
+  const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
+  const [currentTab, setCurrentTab] = useState<number>(tab);
 
   const attachmentsRequired = defaultReimbursementConfig.attachmentsRequired;
 
@@ -59,6 +67,17 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
       } else if (field === 'amount') {
         item.amount = Number(value);
       } else if (field === 'date' && typeof value === 'string') {
+        // Validação de 90 dias
+        const selectedDate = new Date(value);
+        const today = new Date();
+        const ninetyDaysAgo = new Date(today);
+        ninetyDaysAgo.setDate(today.getDate() - 90);
+        
+        if (selectedDate < ninetyDaysAgo) {
+          setMessage('Erro: Não é possível incluir despesas com mais de 90 dias da data atual.');
+          return current; // Não atualiza se inválido
+        }
+        
         item.date = value;
       } else if (field === 'type' && typeof value === 'string') {
         item.type = value;
@@ -119,35 +138,92 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
     notifications.push(`Notificar ${financeAdmin.name} (${financeAdmin.email})`);
 
     const total = items.reduce((subtotal, item) => subtotal + item.amount, 0);
-    const newRequest: ReimbursementRequest = {
-      id: `REQ-${Date.now()}`,
-      createdAt: new Date().toLocaleDateString('pt-BR'),
-      requestedBy: 'João Silva',
-      month,
-      items,
-      attachments,
-      status: 'Enviado',
-      costCenterIds: involvedCostCenters,
-      notifications,
-      total,
-      history: [
-        {
-          id: `hist-${Date.now()}`,
-          timestamp: new Date().toLocaleString('pt-BR'),
-          actor: 'João Silva',
-          action: 'Solicitação enviada',
-        }
-      ]
-    };
 
-    setRequests((current) => [newRequest, ...current]);
-    setSelectedRequestId(newRequest.id);
+    if (editingRequestId) {
+      // Atualizar solicitação existente
+      const updatedRequest: ReimbursementRequest = {
+        ...requests.find(r => r.id === editingRequestId)!,
+        items,
+        attachments,
+        total,
+        status: 'Em análise',
+        history: [
+          ...requests.find(r => r.id === editingRequestId)!.history,
+          {
+            id: `hist-${Date.now()}`,
+            timestamp: new Date().toLocaleString('pt-BR'),
+            actor: 'João Silva',
+            action: 'Solicitação reenviada após ajustes',
+          }
+        ]
+      };
+
+      setRequests((current) => current.map(r => r.id === editingRequestId ? updatedRequest : r));
+      setSelectedRequestId(editingRequestId);
+      setEditingRequestId(null);
+      setMessage('Solicitação reenviada com sucesso. Status: Em análise.');
+    } else {
+      // Criar nova solicitação
+      const newRequest: ReimbursementRequest = {
+        id: `REQ-${Date.now()}`,
+        createdAt: new Date().toLocaleDateString('pt-BR'),
+        requestedBy: 'João Silva',
+        month,
+        items,
+        attachments,
+        status: 'Em análise',
+        costCenterIds: involvedCostCenters,
+        notifications,
+        total,
+        history: [
+          {
+            id: `hist-${Date.now()}`,
+            timestamp: new Date().toLocaleString('pt-BR'),
+            actor: 'João Silva',
+            action: 'Solicitação enviada',
+          }
+        ]
+      };
+
+      setRequests((current) => [newRequest, ...current]);
+      setSelectedRequestId(newRequest.id);
+      setMessage('Solicitação enviada com sucesso. Status: Em análise.');
+    }
+
     setItems([initialItem()]);
     setAttachments([]);
-    setMessage('Solicitação enviada com sucesso. Notificações disparadas.');
+    setGeneralNotes('');
   };
 
-  if (tab === 0) {
+  const handleSaveDraft = () => {
+    setMessage('Rascunho salvo com sucesso.');
+  };
+
+  const handleEditRequest = (requestId: string) => {
+    const request = requests.find(r => r.id === requestId);
+    if (request) {
+      setEditingRequestId(requestId);
+      setItems(request.items.map(item => ({ ...item })));
+      setAttachments([...request.attachments]);
+      setGeneralNotes('');
+      setSelectedCostCenter(request.costCenterIds[0] || costCenters[0].id);
+      setMonth(request.month);
+      setCurrentTab(1); // Mudar para aba "Nova Solicitação"
+      setMessage('');
+    }
+  };
+
+  const filteredRequests = useMemo(() => {
+    return requests.filter((request) => {
+      if (filterStatus !== 'Todos' && request.status !== filterStatus) return false;
+      if (filterProject !== 'Todos' && !request.items.some(item => item.projectId === filterProject)) return false;
+      if (filterDateFrom && new Date(request.createdAt) < new Date(filterDateFrom)) return false;
+      if (filterDateTo && new Date(request.createdAt) > new Date(filterDateTo)) return false;
+      return true;
+    });
+  }, [requests, filterStatus, filterProject, filterDateFrom, filterDateTo]);
+
+  if (currentTab === 0) {
     return (
       <div style={{ paddingTop: '16px' }}>
         <div className="section-title">Minhas Solicitações</div>
@@ -162,12 +238,44 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
             <div className="stat-val green">{requestStats.approved}</div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">Pendentes</div>
+            <div className="stat-label">Em análise</div>
             <div className="stat-val amber">{requestStats.pending}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Rejeitadas</div>
             <div className="stat-val red">{requestStats.rejected}</div>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-title">Filtros</div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Status</label>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                <option>Todos</option>
+                <option>Em análise</option>
+                <option>Aprovado</option>
+                <option>Rejeitado</option>
+                <option>Pago</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Data de (início)</label>
+              <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Data até (fim)</label>
+              <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Projeto</label>
+              <select value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
+                <option>Todos</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>{project.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
         <div className="card">
@@ -185,7 +293,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
                 </tr>
               </thead>
               <tbody>
-                {requests.map((request) => (
+                {filteredRequests.map((request) => (
                   <tr key={request.id}>
                     <td style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>{request.id}</td>
                     <td style={{ fontSize: '12px' }}>{request.createdAt}</td>
@@ -200,12 +308,12 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
                     <td>{request.items.length}</td>
                     <td style={{ fontWeight: '500' }}>R$ {request.total.toFixed(2)}</td>
                     <td>
-                      <span className={`badge ${request.status === 'Aprovado' ? 'badge-approved' : request.status === 'Rejeitado' ? 'badge-rejected' : 'badge-review'}`}>
+                      <span className={`badge ${request.status === 'Aprovado' ? 'badge-approved' : request.status === 'Rejeitado' ? 'badge-rejected' : request.status === 'Pago' ? 'badge-paid' : 'badge-review'}`}>
                         {request.status}
                       </span>
                     </td>
                     <td>
-                      <button className="btn btn-sm" onClick={() => setSelectedRequestId(request.id)}>Ver</button>
+                      <button className="btn btn-sm" onClick={() => setSelectedRequestId(request.id)}>Ver Detalhes</button>
                     </td>
                   </tr>
                 ))}
@@ -217,10 +325,15 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
     );
   }
 
-  if (tab === 1) {
+  if (currentTab === 1) {
     return (
       <div style={{ paddingTop: '16px' }}>
         <div className="section-title">Nova Solicitação de Reembolso</div>
+        {editingRequestId && (
+          <div style={{ marginBottom: '8px', padding: '8px 12px', backgroundColor: 'var(--color-warning-bg)', border: '1px solid var(--color-warning)', borderRadius: '4px', color: 'var(--color-warning-text)' }}>
+            <strong>Editando solicitação:</strong> {editingRequestId}
+          </div>
+        )}
         <div className="section-sub">Preencha todos os dados em um único envio e anexe comprovantes</div>
         <div className="card">
           <div className="card-title">Dados do solicitante</div>
@@ -232,6 +345,25 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
             <div className="form-group">
               <label>Mês de referência</label>
               <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Centro de Custo Principal</label>
+              <select value={selectedCostCenter} onChange={(e) => setSelectedCostCenter(Number(e.target.value))}>
+                {costCenters.map((cc) => (
+                  <option key={cc.id} value={cc.id}>{cc.code} - {cc.manager}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group full">
+              <label>Observações Gerais (opcional)</label>
+              <textarea 
+                value={generalNotes} 
+                onChange={(e) => setGeneralNotes(e.target.value)} 
+                placeholder="Adicione observações gerais sobre a solicitação..."
+                rows={3}
+              />
             </div>
           </div>
         </div>
@@ -301,80 +433,108 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
         </div>
         {message && <div className="info-box"><p>{message}</p></div>}
         <div className="action-row">
-          <button className="btn" onClick={() => setMessage('Rascunho salvo localmente.')}>Salvar rascunho</button>
-          <button className="btn btn-primary" onClick={handleSubmit}>Enviar solicitação</button>
+          <button className="btn" onClick={handleSaveDraft}>Salvar Rascunho</button>
+          <button className="btn btn-primary" onClick={handleSubmit}>Enviar Solicitação</button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div style={{ paddingTop: '16px' }}>
-      <div className="section-title">Acompanhar Solicitação</div>
-      <div className="section-sub">Verifique status, centro de custo e notificações relacionadas</div>
-      <div className="card">
-        <div className="form-row">
-          <div className="form-group full">
-            <label>Selecionar solicitação</label>
-            <select value={selectedRequest?.id ?? ''} onChange={(event) => setSelectedRequestId(event.target.value)}>
-              {requests.map((request) => (
-                <option key={request.id} value={request.id}>{request.id} · {request.createdAt} · {request.status}</option>
-              ))}
-            </select>
+  if (currentTab === 2) {
+    return (
+      <div style={{ paddingTop: '16px' }}>
+        <div className="section-title">Detalhes da Solicitação</div>
+        <div className="section-sub">Verifique status, centro de custo e notificações relacionadas</div>
+        <div className="card">
+          <div className="form-row">
+            <div className="form-group full">
+              <label>Selecionar solicitação</label>
+              <select value={selectedRequest?.id ?? ''} onChange={(event) => setSelectedRequestId(event.target.value)}>
+                {requests.map((request) => (
+                  <option key={request.id} value={request.id}>{request.id} · {request.createdAt} · {request.status}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
-        {selectedRequest ? (
-          <>
-            <div className="card-title">Status atual</div>
-            <div className="request-status">{selectedRequest.status}</div>
-            <div className="two-col">
-              <div className="card">
-                <div className="card-title">Detalhes da solicitação</div>
-                <table style={{ width: '100%', fontSize: '13px' }}>
+          {selectedRequest ? (
+            <>
+              <div className="card-title">Cabeçalho da Solicitação</div>
+              <div className="two-col">
+                <div>
+                  <strong>Solicitante:</strong> {selectedRequest.requestedBy}<br/>
+                  <strong>Data de Abertura:</strong> {selectedRequest.createdAt}<br/>
+                  <strong>Mês de Referência:</strong> {selectedRequest.month}
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <strong>Status Atual:</strong> <span className={`badge ${selectedRequest.status === 'Aprovado' ? 'badge-approved' : selectedRequest.status === 'Rejeitado' ? 'badge-rejected' : selectedRequest.status === 'Pago' ? 'badge-paid' : 'badge-review'}`}>{selectedRequest.status}</span>
+                </div>
+              </div>
+              
+              <div className="card-title">Itens da Solicitação</div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Tipo</th>
+                      <th>Descrição</th>
+                      <th>Valor</th>
+                      <th>Comprovante</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    <tr>
-                      <td style={{ color: 'var(--color-text-secondary)', padding: '5px 0' }}>Solicitante</td>
-                      <td style={{ textAlign: 'right' }}>{selectedRequest.requestedBy}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ color: 'var(--color-text-secondary)', padding: '5px 0' }}>Mês</td>
-                      <td style={{ textAlign: 'right' }}>{selectedRequest.month}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ color: 'var(--color-text-secondary)', padding: '5px 0' }}>Itens</td>
-                      <td style={{ textAlign: 'right' }}>{selectedRequest.items.length}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ color: 'var(--color-text-secondary)', padding: '5px 0' }}>Total</td>
-                      <td style={{ textAlign: 'right', fontWeight: '500' }}>R$ {selectedRequest.total.toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ color: 'var(--color-text-secondary)', padding: '5px 0' }}>Centros de custo</td>
-                      <td style={{ textAlign: 'right' }}>{selectedRequest.costCenterIds.join(', ')}</td>
-                    </tr>
+                    {selectedRequest.items.map((item, index) => (
+                      <tr key={index}>
+                        <td>{item.date}</td>
+                        <td>{item.type}</td>
+                        <td>{item.description}</td>
+                        <td>R$ {item.amount.toFixed(2)}</td>
+                        <td>
+                          {selectedRequest.attachments.length > 0 ? (
+                            <span className="file-badge">📎 Anexado</span>
+                          ) : (
+                            <span style={{ color: 'var(--color-text-secondary)' }}>Não anexado</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`badge ${item.status === 'Aprovado' ? 'badge-approved' : item.status === 'Rejeitado' ? 'badge-rejected' : 'badge-review'}`}>
+                            {item.status || 'Pendente'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
-              <div className="card">
-                <div className="card-title">Notificações geradas</div>
-                <div className="timeline">
-                  {selectedRequest.notifications.map((note, index) => (
-                    <div key={index} className="tl-item">
-                      <div className={`tl-dot ${index === 0 ? 'active' : ''}`}></div>
-                      <div className="tl-time">{index === 0 ? 'Agora' : 'Em breve'}</div>
-                      <div className="tl-label">{note}</div>
+
+              <div className="card-title">Timeline do Histórico</div>
+              <div className="timeline">
+                {selectedRequest.history.map((hist, index) => (
+                  <div key={hist.id} className="tl-item">
+                    <div className={`tl-dot ${index === 0 ? 'active' : ''}`}></div>
+                    <div className="tl-time">{hist.timestamp}</div>
+                    <div className="tl-label">
+                      <strong>{hist.actor}:</strong> {hist.action}
+                      {hist.comments && <div style={{ fontSize: '12px', marginTop: '4px', color: 'var(--color-text-secondary)' }}>{hist.comments}</div>}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          </>
-        ) : (
-          <div className="info-box"><p>Não há solicitações selecionadas.</p></div>
-        )}
+
+              {selectedRequest.status === 'Aguardando ajustes' && (
+                <div className="action-row">
+                  <button className="btn btn-primary" onClick={() => handleEditRequest(selectedRequest.id)}>Editar e Reenviar</button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="info-box"><p>Não há solicitações selecionadas.</p></div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 };
 
 export default ColaboradorPages;

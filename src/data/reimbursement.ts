@@ -20,11 +20,11 @@ export interface ReimbursementItem {
   projectId: string;
   costCenterId: number;
   amount: number;
-  status?: 'Aprovado' | 'Rejeitado' | 'Pendente';
+  status?: 'Aprovado' | 'Rejeitado' | 'Pendente' | 'Pago' | 'Em análise' | 'Aguardando ajustes';
   rejectionReason?: string;
 }
 
-export type RequestStatus = 'Enviado' | 'Em análise' | 'Aguardando ajustes' | 'Aprovado' | 'Rejeitado' | 'Pago';
+export type RequestStatus = 'Enviado' | 'Em análise' | 'Aguardando ajustes' | 'Aprovado' | 'Rejeitado' | 'Pago' | 'Rascunho';
 
 export interface ActionHistory {
   id: string;
@@ -161,5 +161,273 @@ export const sampleRequests: ReimbursementRequest[] = [
       }
     ],
     paymentDate: '20/04/2026'
+  },
+  {
+    id: '2024-020',
+    createdAt: '10/03/2026',
+    requestedBy: 'João Silva',
+    month: '2026-03',
+    items: [
+      {
+        id: 'item-4',
+        date: '2026-03-08',
+        type: 'Transporte',
+        description: 'Taxi para visita técnica',
+        projectId: 'gamma',
+        costCenterId: 5102,
+        amount: 89.50,
+        status: 'Pago'
+      }
+    ],
+    attachments: ['recibo_taxi.pdf'],
+    status: 'Pago',
+    costCenterIds: [5102],
+    notifications: [],
+    total: 89.50,
+    history: [
+      {
+        id: 'hist-5',
+        timestamp: '10/03/2026 11:00',
+        actor: 'João Silva',
+        action: 'Solicitação enviada'
+      },
+      {
+        id: 'hist-6',
+        timestamp: '12/03/2026 09:15',
+        actor: 'Fernanda Souza',
+        action: 'Validado pelo técnico administrativo'
+      },
+      {
+        id: 'hist-7',
+        timestamp: '13/03/2026 14:20',
+        actor: 'Paulo Lima',
+        action: 'Aprovado pelo gestor'
+      },
+      {
+        id: 'hist-8',
+        timestamp: '15/03/2026 10:00',
+        actor: 'Roberto Almeida',
+        action: 'Pagamento processado'
+      }
+    ],
+    paymentDate: '15/03/2026'
+  },
+  {
+    id: '2024-021',
+    createdAt: '05/02/2026',
+    requestedBy: 'João Silva',
+    month: '2026-02',
+    items: [
+      {
+        id: 'item-5',
+        date: '2026-02-03',
+        type: 'Refeição',
+        description: 'Jantar com cliente potencial',
+        projectId: 'alpha',
+        costCenterId: 4521,
+        amount: 120.00,
+        status: 'Rejeitado'
+      }
+    ],
+    attachments: ['nota_restaurante.pdf'],
+    status: 'Rejeitado',
+    costCenterIds: [4521],
+    notifications: [],
+    total: 120.00,
+    history: [
+      {
+        id: 'hist-9',
+        timestamp: '05/02/2026 18:30',
+        actor: 'João Silva',
+        action: 'Solicitação enviada'
+      },
+      {
+        id: 'hist-10',
+        timestamp: '07/02/2026 10:45',
+        actor: 'Fernanda Souza',
+        action: 'Validado pelo técnico administrativo'
+      },
+      {
+        id: 'hist-11',
+        timestamp: '08/02/2026 16:00',
+        actor: 'Paulo Lima',
+        action: 'Rejeitado pelo gestor',
+        comments: 'Valor acima do limite permitido para refeições'
+      }
+    ]
+  },
+  {
+    id: '2024-022',
+    createdAt: '20/01/2026',
+    requestedBy: 'João Silva',
+    month: '2026-01',
+    items: [
+      {
+        id: 'item-6',
+        date: '2026-01-18',
+        type: 'Gráfica',
+        description: 'Impressão de folders promocionais',
+        projectId: 'beta',
+        costCenterId: 3308,
+        amount: 450.00,
+        status: 'Aguardando ajustes'
+      }
+    ],
+    attachments: ['orcamento_grafica.pdf'],
+    status: 'Aguardando ajustes',
+    costCenterIds: [3308],
+    notifications: [],
+    total: 450.00,
+    history: [
+      {
+        id: 'hist-12',
+        timestamp: '20/01/2026 14:00',
+        actor: 'João Silva',
+        action: 'Solicitação enviada'
+      },
+      {
+        id: 'hist-13',
+        timestamp: '22/01/2026 11:20',
+        actor: 'Fernanda Souza',
+        action: 'Solicitado ajustes ao colaborador',
+        comments: 'Falta comprovante fiscal da gráfica'
+      }
+    ]
+  },
+  {
+    id: '2024-023',
+    createdAt: '12/12/2025',
+    requestedBy: 'João Silva',
+    month: '2025-12',
+    items: [
+      {
+        id: 'item-7',
+        date: '2025-12-10',
+        type: 'Transporte',
+        description: 'Passagem aérea para conferência',
+        projectId: 'alpha',
+        costCenterId: 4521,
+        amount: 850.00,
+        status: 'Aprovado'
+      }
+    ],
+    attachments: ['bilhete_aviao.pdf'],
+    status: 'Aprovado',
+    costCenterIds: [4521],
+    notifications: [],
+    total: 850.00,
+    history: [
+      {
+        id: 'hist-14',
+        timestamp: '12/12/2025 09:45',
+        actor: 'João Silva',
+        action: 'Solicitação enviada'
+      },
+      {
+        id: 'hist-15',
+        timestamp: '14/12/2025 13:30',
+        actor: 'Fernanda Souza',
+        action: 'Validado pelo técnico administrativo'
+      },
+      {
+        id: 'hist-16',
+        timestamp: '15/12/2025 10:15',
+        actor: 'Paulo Lima',
+        action: 'Aprovado pelo gestor'
+      }
+    ]
+  },
+  {
+    id: '2024-024',
+    createdAt: '08/11/2025',
+    requestedBy: 'João Silva',
+    month: '2025-11',
+    items: [
+      {
+        id: 'item-8',
+        date: '2025-11-05',
+        type: 'Outros',
+        description: 'Software de edição de vídeo',
+        projectId: 'gamma',
+        costCenterId: 5102,
+        amount: 299.99,
+        status: 'Em análise'
+      }
+    ],
+    attachments: ['nota_software.pdf'],
+    status: 'Em análise',
+    costCenterIds: [5102],
+    notifications: [
+      'Gestor Paulo Lima notificado para centro de custo 5102'
+    ],
+    total: 299.99,
+    history: [
+      {
+        id: 'hist-17',
+        timestamp: '08/11/2025 16:20',
+        actor: 'João Silva',
+        action: 'Solicitação enviada'
+      }
+    ]
+  },
+  {
+    id: '2024-025',
+    createdAt: '25/10/2025',
+    requestedBy: 'João Silva',
+    month: '2025-10',
+    items: [
+      {
+        id: 'item-9',
+        date: '2025-10-22',
+        type: 'Alimentação',
+        description: 'Coffee break em reunião',
+        projectId: 'beta',
+        costCenterId: 3308,
+        amount: 75.00,
+        status: 'Pago'
+      },
+      {
+        id: 'item-10',
+        date: '2025-10-23',
+        type: 'Transporte',
+        description: 'Estacionamento',
+        projectId: 'beta',
+        costCenterId: 3308,
+        amount: 15.00,
+        status: 'Pago'
+      }
+    ],
+    attachments: ['recibos_coffee.pdf'],
+    status: 'Pago',
+    costCenterIds: [3308],
+    notifications: [],
+    total: 90.00,
+    history: [
+      {
+        id: 'hist-18',
+        timestamp: '25/10/2025 12:00',
+        actor: 'João Silva',
+        action: 'Solicitação enviada'
+      },
+      {
+        id: 'hist-19',
+        timestamp: '27/10/2025 09:30',
+        actor: 'Fernanda Souza',
+        action: 'Validado pelo técnico administrativo'
+      },
+      {
+        id: 'hist-20',
+        timestamp: '28/10/2025 14:45',
+        actor: 'Paulo Lima',
+        action: 'Aprovado pelo gestor'
+      },
+      {
+        id: 'hist-21',
+        timestamp: '30/10/2025 11:00',
+        actor: 'Roberto Almeida',
+        action: 'Pagamento processado'
+      }
+    ],
+    paymentDate: '30/10/2025'
   }
 ];
