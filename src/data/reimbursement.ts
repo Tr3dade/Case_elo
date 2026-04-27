@@ -63,9 +63,9 @@ export const projects: Project[] = [
 ];
 
 export const costCenters: CostCenter[] = [
-  { id: 4521, code: '4521', projectId: 'alpha', manager: 'Ana Lima', managerEmail: 'ana.lima@empresa.com' },
-  { id: 3308, code: '3308', projectId: 'beta', manager: 'Ana Lima', managerEmail: 'ana.lima@empresa.com' },
-  { id: 5102, code: '5102', projectId: 'gamma', manager: 'Carlos Souza', managerEmail: 'carlos.souza@empresa.com' }
+  { id: 4521, code: '4521', projectId: 'alpha', manager: 'Paulo Lima', managerEmail: 'paulo.lima@empresa.com' },
+  { id: 3308, code: '3308', projectId: 'beta', manager: 'Paulo Lima', managerEmail: 'paulo.lima@empresa.com' },
+  { id: 5102, code: '5102', projectId: 'gamma', manager: 'Fernanda Souza', managerEmail: 'fernanda.souza@empresa.com' }
 ];
 
 export const defaultReimbursementConfig = {
@@ -77,7 +77,7 @@ export const sampleRequests: ReimbursementRequest[] = [
   {
     id: '2024-018',
     createdAt: '15/04/2026',
-    requestedBy: 'João Martins',
+    requestedBy: 'João Silva',
     month: '2026-04',
     items: [
       {
@@ -105,7 +105,7 @@ export const sampleRequests: ReimbursementRequest[] = [
     status: 'Em análise',
     costCenterIds: [4521, 3308],
     notifications: [
-      'Gestor Ana Lima notificado para centro de custo 4521',
+      'Gestor Paulo Lima notificado para centro de custo 4521',
       'Financeiro notificado para revisão financeira'
     ],
     total: 201.0,
@@ -113,7 +113,7 @@ export const sampleRequests: ReimbursementRequest[] = [
       {
         id: 'hist-1',
         timestamp: '15/04/2026 10:30',
-        actor: 'João Martins',
+        actor: 'João Silva',
         action: 'Solicitação enviada'
       }
     ]
@@ -121,7 +121,7 @@ export const sampleRequests: ReimbursementRequest[] = [
   {
     id: '2024-019',
     createdAt: '16/04/2026',
-    requestedBy: 'João Martins',
+    requestedBy: 'João Silva',
     month: '2026-04',
     items: [
       {
@@ -144,19 +144,19 @@ export const sampleRequests: ReimbursementRequest[] = [
       {
         id: 'hist-2',
         timestamp: '16/04/2026 09:00',
-        actor: 'João Martins',
+        actor: 'João Silva',
         action: 'Solicitação enviada'
       },
       {
         id: 'hist-3',
         timestamp: '16/04/2026 14:00',
-        actor: 'Carlos Souza',
+        actor: 'Fernanda Souza',
         action: 'Validado pelo técnico administrativo'
       },
       {
         id: 'hist-4',
         timestamp: '16/04/2026 15:30',
-        actor: 'Ana Lima',
+        actor: 'Paulo Lima',
         action: 'Aprovado pelo gestor'
       }
     ],

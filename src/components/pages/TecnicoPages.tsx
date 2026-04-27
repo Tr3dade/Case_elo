@@ -80,7 +80,7 @@ const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
     const newHistory = {
       id: `hist-${Date.now()}`,
       timestamp: new Date().toLocaleString('pt-BR'),
-      actor: 'Carlos Souza',
+      actor: 'Fernanda Souza',
       action: 'Solicitado ajustes ao colaborador',
       comments: comment || undefined
     };
@@ -94,7 +94,7 @@ const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
     const newHistory = {
       id: `hist-${Date.now()}`,
       timestamp: new Date().toLocaleString('pt-BR'),
-      actor: 'Carlos Souza',
+      actor: 'Fernanda Souza',
       action: 'Encaminhado ao gestor para aprovação',
       comments: comments[request.id] || undefined
     };
@@ -269,8 +269,8 @@ const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
               <tbody>
                 <tr>
                   <td style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>#2024-018</td>
-                  <td>João Martins</td>
-                  <td>Ana Lima</td>
+                  <td>João Silva</td>
+                  <td>Paulo Lima</td>
                   <td style={{ fontWeight: '500' }}>R$ 156,00</td>
                   <td><span className="badge badge-review">Aguard. gestor</span></td>
                   <td style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>15/04</td>
@@ -313,8 +313,8 @@ const TecnicoPages: React.FC<TecnicoPagesProps> = ({ tab }) => {
             <tbody>
               <tr>
                 <td style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>#2024-015</td>
-                <td>João Martins</td>
-                <td>Ana Lima</td>
+                <td>João Silva</td>
+                <td>Paulo Lima</td>
                 <td style={{ fontWeight: '500' }}>R$ 89,50</td>
                 <td><span className="badge badge-paid">Pago</span></td>
                 <td style={{ fontSize: '12px' }}>05/04/2026</td>

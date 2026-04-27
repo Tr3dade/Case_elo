@@ -90,7 +90,7 @@ const FinanceiroPages: React.FC<FinanceiroPagesProps> = ({ tab }) => {
                           <div style={{ fontWeight: '500' }}>{request.requestedBy}</div>
                           <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>joao.martins@empresa.com</div>
                         </td>
-                        <td>Ana Lima</td>
+                        <td>Paulo Lima</td>
                         <td style={{ fontWeight: '500', color: 'var(--color-accent-cyan)' }}>R$ {request.total.toFixed(2)}</td>
                         <td style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                           {lastApproval ? lastApproval.timestamp.split(' ')[0] : request.createdAt}

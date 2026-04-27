@@ -122,7 +122,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
     const newRequest: ReimbursementRequest = {
       id: `REQ-${Date.now()}`,
       createdAt: new Date().toLocaleDateString('pt-BR'),
-      requestedBy: 'João Martins',
+      requestedBy: 'João Silva',
       month,
       items,
       attachments,
@@ -134,7 +134,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
         {
           id: `hist-${Date.now()}`,
           timestamp: new Date().toLocaleString('pt-BR'),
-          actor: 'João Martins',
+          actor: 'João Silva',
           action: 'Solicitação enviada',
         }
       ]
@@ -227,7 +227,7 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab }) => {
           <div className="form-row">
             <div className="form-group">
               <label>Funcionário</label>
-              <input type="text" value="João Martins" disabled style={{ opacity: '0.6' }} />
+              <input type="text" value="João Silva" disabled style={{ opacity: '0.6' }} />
             </div>
             <div className="form-group">
               <label>Mês de referência</label>

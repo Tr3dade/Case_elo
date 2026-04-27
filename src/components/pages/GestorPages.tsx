@@ -29,7 +29,7 @@ const GestorPages: React.FC<GestorPagesProps> = ({ tab }) => {
     const newHistory: ActionHistory = {
       id: `hist-${Date.now()}`,
       timestamp: new Date().toLocaleString('pt-BR'),
-      actor: 'Ana Lima',
+      actor: 'Paulo Lima',
       action: 'Aprovado totalmente pelo gestor',
       comments: actionComments || undefined,
     };
@@ -59,7 +59,7 @@ const GestorPages: React.FC<GestorPagesProps> = ({ tab }) => {
     const newHistory: ActionHistory = {
       id: `hist-${Date.now()}`,
       timestamp: new Date().toLocaleString('pt-BR'),
-      actor: 'Ana Lima',
+      actor: 'Paulo Lima',
       action: 'Aprovação parcial pelo gestor',
       comments: actionComments || undefined,
     };
@@ -91,7 +91,7 @@ const GestorPages: React.FC<GestorPagesProps> = ({ tab }) => {
     const newHistory: ActionHistory = {
       id: `hist-${Date.now()}`,
       timestamp: new Date().toLocaleString('pt-BR'),
-      actor: 'Ana Lima',
+      actor: 'Paulo Lima',
       action: 'Rejeitado pelo gestor',
       comments: actionComments || undefined,
     };
@@ -113,7 +113,7 @@ const GestorPages: React.FC<GestorPagesProps> = ({ tab }) => {
     const newHistory: ActionHistory = {
       id: `hist-${Date.now()}`,
       timestamp: new Date().toLocaleString('pt-BR'),
-      actor: 'Ana Lima',
+      actor: 'Paulo Lima',
       action: 'Ajustes solicitados pelo gestor',
       comments: actionComments,
     };

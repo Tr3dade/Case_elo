@@ -5,12 +5,17 @@ interface TopbarProps {
   roleData: Role;
   currentRole: string;
   onRoleChange: (role: string) => void;
+  userName: string;
 }
 
-const Topbar: React.FC<TopbarProps> = ({ roleData, currentRole, onRoleChange }) => {
+const Topbar: React.FC<TopbarProps> = ({ roleData, currentRole, onRoleChange, userName }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(word => word.charAt(0)).join('').toUpperCase();
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -30,9 +35,9 @@ const Topbar: React.FC<TopbarProps> = ({ roleData, currentRole, onRoleChange }) 
         ReembolsaApp
       </div>
       <div className="topbar-user" onClick={() => setIsDropdownOpen(!isDropdownOpen)} style={{ cursor: 'pointer' }}>
-        <div className="avatar">{roleData.initials}</div>
+        <div className="avatar">{getInitials(userName)}</div>
         <div>
-          <div className="user-name">{roleData.name}</div>
+          <div className="user-name">{userName}</div>
           <div className="role-badge">{roleData.label}</div>
         </div>
         {isDropdownOpen && (

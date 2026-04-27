@@ -3,13 +3,47 @@
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
 
-  /* New Color Palette */
-  --primary-color: #5DADE2;    /* Azul: Botões e Links principais */
-  --bg-dark: #121212;          /* Preto: Seções de destaque ou Footer */
-  --bg-light: #FFFFFF;         /* Branco: Fundo principal de leitura */
-  --text-main: #333333;        /* Cinza Escuro: Títulos e corpo de texto */
-  --text-muted: #757575;       /* Cinza Médio: Placeholders e legendas */
-  --border-color: #E0E0E0;     /* Cinza Claro: Divisores e bordas de inputs */
+  /* New Color Palette - Modo Claro */
+  --bg-page: #f4f6f9;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f0f2f7;
+  --bg-hover: #eaecf3;
+
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  --accent-light: #dbeafe;
+
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+
+  /* Status semânticos */
+  --success-text: #16a34a;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+
+  --warning-text: #b45309;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+
+  --error-text: #dc2626;
+  --error-bg: #fef2f2;
+  --error-border: #fecaca;
+
+  --info-text: #1d4ed8;
+  --info-bg: #eff6ff;
+  --info-border: #bfdbfe;
+
+  --partial-text: #7c3aed;
+  --partial-bg: #f5f3ff;
+  --partial-border: #ddd6fe;
+
+  --completed-text: #0f766e;
+  --completed-bg: #f0fdfa;
+  --completed-border: #99f6e4;
 
   /* Legacy color variables for compatibility */
   --color-background-primary: var(--bg-dark);
@@ -54,10 +88,10 @@
 
 body {
   font-family: var(--font-sans);
-  background: var(--color-background-tertiary);
+  background: var(--bg-page);
 }
 
 .app {
   min-height: 600px;
-  background: var(--color-background-tertiary);
+  background: var(--bg-page);
 }

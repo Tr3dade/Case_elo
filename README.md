@@ -35,6 +35,22 @@ O sistema permite visualizar diferentes perspectivas do processo de reembolso:
 - **Técnico Administrativo**: Validar conformidade dos documentos
 - **Financeiro**: Processar pagamentos
 
+## Logins Disponíveis
+
+Para testar o sistema, utilize os seguintes logins:
+
+### Colaboradores
+- **Nome:** João Silva | **Usuário:** joao.silva | **Senha:** senha123
+- **Nome:** Maria Costa | **Usuário:** maria.costa | **Senha:** senha123
+- **Nome:** Carlos Santos | **Usuário:** carlos.santos | **Senha:** senha123
+- **Nome:** Ana Oliveira | **Usuário:** ana.oliveira | **Senha:** senha123
+
+### Outros Perfis
+- **Nome:** Paulo Lima | **Usuário:** paulo.lima | **Senha:** senha123 (Gestor)
+- **Nome:** Fernanda Souza | **Usuário:** fernanda.souza | **Senha:** senha123 (Técnico Administrativo)
+- **Nome:** Roberto Almeida | **Usuário:** roberto.almeida | **Senha:** senha123 (Financeiro)
+- **Nome:** Admin User | **Usuário:** admin.user | **Senha:** senha123 (Admin)
+
 ## Como executar
 
 1. Instalar dependências:

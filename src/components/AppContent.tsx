@@ -6,9 +6,14 @@ import Topbar from './Topbar';
 import RoleSelector from './RoleSelector';
 import NavTabs from './NavTabs';
 import Content from './Content';
+import { User } from '../data/users';
 
-const AppContent: React.FC = () => {
-  const [currentRole, setCurrentRole] = useState<string>('colaborador');
+interface AppContentProps {
+  user: User;
+}
+
+const AppContent: React.FC<AppContentProps> = ({ user }) => {
+  const [currentRole, setCurrentRole] = useState<string>(user.role);
   const [currentTab, setCurrentTab] = useState<number>(0);
 
   const handleRoleChange = (role: string) => {
@@ -24,7 +29,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="app">
-      <Topbar roleData={currentRoleData} currentRole={currentRole} onRoleChange={handleRoleChange} />
+      <Topbar roleData={currentRoleData} currentRole={currentRole} onRoleChange={handleRoleChange} userName={user.name} />
       <RoleSelector currentRole={currentRole} onRoleChange={handleRoleChange} />
       <NavTabs tabs={currentRoleData.tabs} currentTab={currentTab} onTabChange={handleTabChange} />
       <Content role={currentRole} tab={currentTab} />
