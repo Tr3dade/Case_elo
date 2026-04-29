@@ -51,9 +51,8 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user, onTabCha
     project: 'Todos'
   });
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
-  const [showAllRequests, setShowAllRequests] = useState(false);
-  const [page, setPage] = useState(1);
-  const pageSize = 5;
+  const [_showAllRequests, setShowAllRequests] = useState(false);
+  const [_page, setPage] = useState(1);
 
   const attachmentsRequired = defaultReimbursementConfig.attachmentsRequired;
 
@@ -61,13 +60,6 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user, onTabCha
     () => requests.filter((request) => request.requestedBy === user.name),
     [requests, user.name]
   );
-
-  const sortedUserRequests = useMemo(
-    () => [...userRequests].sort((a, b) => parseDateString(b.createdAt).getTime() - parseDateString(a.createdAt).getTime()),
-    [userRequests]
-  );
-
-  const latestRequests = sortedUserRequests.slice(0, 5);
 
   const selectedRequest = userRequests.find((request) => request.id === selectedRequestId) ?? userRequests[0];
 
@@ -246,14 +238,6 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user, onTabCha
     setPage(1);
   };
 
-  const handleCancel = () => {
-    setItems([initialItem()]);
-    setAttachments([]);
-    setGeneralNotes('');
-    setEditingRequestId(null);
-    setMessage('');
-  };
-
   const handleEditRequest = (requestId: string) => {
     const request = requests.find(r => r.id === requestId);
     if (request) {
@@ -277,9 +261,6 @@ const ColaboradorPages: React.FC<ColaboradorPagesProps> = ({ tab, user, onTabCha
       return true;
     });
   }, [userRequests, appliedFilters]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / pageSize));
-  const paginatedRequests = filteredRequests.slice((page - 1) * pageSize, page * pageSize);
 
   if (tab === 0) {
     return (

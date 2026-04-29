@@ -9,13 +9,14 @@ interface ContentProps {
   role: string;
   tab: number;
   user: User;
+  onTabChange?: (tabIndex: number) => void;
 }
 
-const Content: React.FC<ContentProps> = ({ role, tab, user }) => {
+const Content: React.FC<ContentProps> = ({ role, tab, user, onTabChange = () => {} }) => {
   const renderContent = () => {
     switch (role) {
       case 'colaborador':
-        return <ColaboradorPages tab={tab} user={user} />;
+        return <ColaboradorPages tab={tab} user={user} onTabChange={onTabChange} />;
       case 'gestor':
         return <GestorPages tab={tab} />;
       case 'tecnico':

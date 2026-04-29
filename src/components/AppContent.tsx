@@ -32,7 +32,7 @@ const AppContent: React.FC<AppContentProps> = ({ user }) => {
       <Topbar roleData={currentRoleData} currentRole={currentRole} onRoleChange={handleRoleChange} userName={user.name} />
       <RoleSelector currentRole={currentRole} onRoleChange={handleRoleChange} />
       <NavTabs tabs={currentRoleData.tabs} currentTab={currentTab} onTabChange={handleTabChange} />
-      <Content role={currentRole} tab={currentTab} user={user} />
+      <Content role={currentRole} tab={currentTab} user={user} onTabChange={handleTabChange} />
     </div>
   );
 };
