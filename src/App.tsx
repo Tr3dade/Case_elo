@@ -12,7 +12,12 @@ const App: React.FC = () => {
     setIsLoggedIn(true);
   };
 
-  return isLoggedIn && loggedUser ? <AppContent user={loggedUser} /> : <Login onLogin={handleLogin} />;
+  const handleLogout = () => {
+    setLoggedUser(null);
+    setIsLoggedIn(false);
+  };
+
+  return isLoggedIn && loggedUser ? <AppContent user={loggedUser} onLogout={handleLogout} /> : <Login onLogin={handleLogin} />;
 };;
 
 export default App;

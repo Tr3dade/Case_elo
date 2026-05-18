@@ -6,9 +6,10 @@ interface TopbarProps {
   currentRole: string;
   onRoleChange: (role: string) => void;
   userName: string;
+  onLogout: () => void;
 }
 
-const Topbar: React.FC<TopbarProps> = ({ roleData, currentRole, onRoleChange, userName }) => {
+const Topbar: React.FC<TopbarProps> = ({ roleData, currentRole, onRoleChange, userName, onLogout }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -31,8 +32,8 @@ const Topbar: React.FC<TopbarProps> = ({ roleData, currentRole, onRoleChange, us
   return (
     <div className="topbar">
       <div className="topbar-logo">
-        <div className="logo-dot"></div>
-        ReembolsaApp
+        <img src="/elo_logo.png" alt="ELO Group" style={{ height: '32px', marginRight: '12px' }} />
+        GERENCIAMENTO DE REEMBOLSOS
       </div>
       <div className="topbar-user" onClick={() => setIsDropdownOpen(!isDropdownOpen)} style={{ cursor: 'pointer' }}>
         <div className="avatar">{getInitials(userName)}</div>
@@ -42,7 +43,6 @@ const Topbar: React.FC<TopbarProps> = ({ roleData, currentRole, onRoleChange, us
         </div>
         {isDropdownOpen && (
           <div className="dropdown-menu" ref={dropdownRef}>
-            <div className="dropdown-item disabled">Sair</div>
             <div className="dropdown-item">Opções</div>
             <div className="dropdown-item" onClick={(e) => { e.stopPropagation(); setIsSubmenuOpen(!isSubmenuOpen); }}>Gerenciar cargo</div>
             {isSubmenuOpen && (
@@ -54,6 +54,7 @@ const Topbar: React.FC<TopbarProps> = ({ roleData, currentRole, onRoleChange, us
                 ))}
               </div>
             )}
+            <div className="dropdown-item" onClick={() => { setIsDropdownOpen(false); onLogout(); }} style={{ cursor: 'pointer', color: '#FF6B6B', fontWeight: '500' }}>Sair</div>
           </div>
         )}
       </div>

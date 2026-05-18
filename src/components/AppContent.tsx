@@ -10,9 +10,10 @@ import { User } from '../data/users';
 
 interface AppContentProps {
   user: User;
+  onLogout: () => void;
 }
 
-const AppContent: React.FC<AppContentProps> = ({ user }) => {
+const AppContent: React.FC<AppContentProps> = ({ user, onLogout }) => {
   const [currentRole, setCurrentRole] = useState<string>(user.role);
   const [currentTab, setCurrentTab] = useState<number>(0);
 
@@ -29,8 +30,8 @@ const AppContent: React.FC<AppContentProps> = ({ user }) => {
 
   return (
     <div className="app">
-      <Topbar roleData={currentRoleData} currentRole={currentRole} onRoleChange={handleRoleChange} userName={user.name} />
-      <RoleSelector currentRole={currentRole} onRoleChange={handleRoleChange} />
+      <Topbar roleData={currentRoleData} currentRole={currentRole} onRoleChange={handleRoleChange} userName={user.name} onLogout={onLogout} />
+      {/* <RoleSelector currentRole={currentRole} onRoleChange={handleRoleChange} /> */}
       <NavTabs tabs={currentRoleData.tabs} currentTab={currentTab} onTabChange={handleTabChange} />
       <Content role={currentRole} tab={currentTab} user={user} onTabChange={handleTabChange} />
     </div>
