@@ -1,26 +1,3 @@
-"""
-=============================================================================
- ANÁLISE DE INDICADORES — PROJETO VÉRTICE
-=============================================================================
-Script de extração e diagnóstico das 5 bases do case:
-  vendas.csv | marketing.csv | clientes.csv | atendimento.csv | estoque.csv
-
-O QUE O SCRIPT FAZ
-  1. Carrega as 5 bases (ajuste os caminhos na seção CONFIG abaixo).
-  2. Calcula os principais indicadores de negócio por canal, categoria,
-     produto, segmento de cliente, categoria de ticket e status de estoque.
-  3. Imprime um resumo executivo no terminal.
-  4. Exporta cada tabela de resultado como um .csv separado na pasta de
-     saída, pronta para abrir no Excel/Power BI ou alimentar outra análise.
-
-REQUISITOS
-  pip install pandas --break-system-packages   (ou apenas "pip install pandas")
-
-COMO USAR
-  python analise_vertice.py
-=============================================================================
-"""
-
 import os
 import pandas as pd
 
