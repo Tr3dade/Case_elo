@@ -1,5 +1,5 @@
-# Ignora os dados gerados na pasta de respostas
-resposta/
+# Ignora os dados gerados na pasta de saídas
+saida/
 
 # Python cache
 __pycache__/

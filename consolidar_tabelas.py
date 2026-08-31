@@ -4,11 +4,12 @@ import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parent
 BASE_DATA_DIR = BASE_DIR / "base"
-RESPOSTA_DIR = BASE_DIR / "resposta"
-OUTPUT_SUMARIO = RESPOSTA_DIR / "indicadores_resumo.csv"
-OUTPUT_DETALHADO = RESPOSTA_DIR / "dados_consolidados.csv"
-OUTPUT_CLIENTES_ATIVOS = RESPOSTA_DIR / "clientes_que_compraram.csv"
-OUTPUT_PROFITABILITY = RESPOSTA_DIR / "indicadores_profitability.csv"
+SAIDA_DIR = BASE_DIR / "saida"
+CONSOLIDAR_DIR = SAIDA_DIR / "consolidar_tabelas"
+OUTPUT_SUMARIO = CONSOLIDAR_DIR / "indicadores_resumo.csv"
+OUTPUT_DETALHADO = CONSOLIDAR_DIR / "dados_consolidados.csv"
+OUTPUT_CLIENTES_ATIVOS = CONSOLIDAR_DIR / "clientes_que_compraram.csv"
+OUTPUT_PROFITABILITY = CONSOLIDAR_DIR / "indicadores_profitability.csv"
 
 
 def carregar_csv(nome_arquivo: str) -> pd.DataFrame:
@@ -181,7 +182,8 @@ def montar_tabela_profitability() -> pd.DataFrame:
 
 def main() -> None:
     BASE_DATA_DIR.mkdir(exist_ok=True)
-    RESPOSTA_DIR.mkdir(exist_ok=True)
+    SAIDA_DIR.mkdir(exist_ok=True)
+    CONSOLIDAR_DIR.mkdir(exist_ok=True)
 
     resumo_df = montar_indicadores()
     resumo_df.to_csv(OUTPUT_SUMARIO, index=False, encoding="utf-8")
