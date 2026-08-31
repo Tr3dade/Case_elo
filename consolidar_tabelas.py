@@ -7,6 +7,7 @@ BASE_DATA_DIR = BASE_DIR / "base"
 RESPOSTA_DIR = BASE_DIR / "resposta"
 OUTPUT_SUMARIO = RESPOSTA_DIR / "indicadores_resumo.csv"
 OUTPUT_DETALHADO = RESPOSTA_DIR / "dados_consolidados.csv"
+OUTPUT_CLIENTES_ATIVOS = RESPOSTA_DIR / "clientes_que_compraram.csv"
 
 
 def carregar_csv(nome_arquivo: str) -> pd.DataFrame:
@@ -115,12 +116,9 @@ def montar_indicadores() -> pd.DataFrame:
     return resumo_df
 
 
-def montar_dados_consolidados() -> pd.DataFrame:
+def montar_dados_consolidados() -> tuple[pd.DataFrame, pd.DataFrame]:
     clientes = carregar_csv("clientes.csv")
     vendas = carregar_csv("vendas.csv")
-    estoque = carregar_csv("estoque.csv")
-    marketing = carregar_csv("marketing.csv")
-    atendimento = carregar_csv("atendimento.csv")
 
     vendas = vendas.copy()
     vendas["quantidade"] = pd.to_numeric(vendas["quantidade"], errors="coerce")
@@ -142,7 +140,10 @@ def montar_dados_consolidados() -> pd.DataFrame:
     consolidado["quantidade_itens"] = consolidado["quantidade_itens"].fillna(0)
     consolidado["ltv_acumulado"] = pd.to_numeric(consolidado["ltv_acumulado"], errors="coerce")
 
-    return consolidado
+    clientes_ativos = consolidado[consolidado["total_pedidos_vendas"] > 0].copy()
+    clientes_ativos = clientes_ativos.reset_index(drop=True)
+
+    return consolidado, clientes_ativos
 
 
 def main() -> None:
@@ -152,11 +153,15 @@ def main() -> None:
     resumo_df = montar_indicadores()
     resumo_df.to_csv(OUTPUT_SUMARIO, index=False, encoding="utf-8")
 
-    consolidado = montar_dados_consolidados()
+    consolidado, clientes_ativos = montar_dados_consolidados()
     consolidado.to_csv(OUTPUT_DETALHADO, index=False, encoding="utf-8")
+    clientes_ativos.to_csv(OUTPUT_CLIENTES_ATIVOS, index=False, encoding="utf-8")
 
     print(f"Arquivo gerado: {OUTPUT_SUMARIO}")
     print(f"Arquivo gerado: {OUTPUT_DETALHADO}")
+    print(f"Arquivo gerado: {OUTPUT_CLIENTES_ATIVOS}")
+    print(f"Clientes totais: {len(consolidado)}")
+    print(f"Clientes ativos: {len(clientes_ativos)}")
     print("\nPreview dos indicadores:")
     print(resumo_df.head(15).to_string(index=False))
 
