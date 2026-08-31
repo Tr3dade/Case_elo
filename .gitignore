@@ -1,0 +1,18 @@
+# Ignora os dados gerados na pasta de respostas
+resposta/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Ambiente virtual
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Sistema
+.DS_Store
+Thumbs.db
