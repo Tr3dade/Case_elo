@@ -8,6 +8,7 @@ RESPOSTA_DIR = BASE_DIR / "resposta"
 OUTPUT_SUMARIO = RESPOSTA_DIR / "indicadores_resumo.csv"
 OUTPUT_DETALHADO = RESPOSTA_DIR / "dados_consolidados.csv"
 OUTPUT_CLIENTES_ATIVOS = RESPOSTA_DIR / "clientes_que_compraram.csv"
+OUTPUT_PROFITABILITY = RESPOSTA_DIR / "indicadores_profitability.csv"
 
 
 def carregar_csv(nome_arquivo: str) -> pd.DataFrame:
@@ -146,6 +147,38 @@ def montar_dados_consolidados() -> tuple[pd.DataFrame, pd.DataFrame]:
     return consolidado, clientes_ativos
 
 
+def montar_tabela_profitability() -> pd.DataFrame:
+    vendas = carregar_csv("vendas.csv")
+    marketing = carregar_csv("marketing.csv")
+    atendimento = carregar_csv("atendimento.csv")
+
+    vendas["receita_liquida"] = pd.to_numeric(vendas["receita_liquida"], errors="coerce")
+    vendas["quantidade"] = pd.to_numeric(vendas["quantidade"], errors="coerce")
+    vendas["custo_produto"] = pd.to_numeric(vendas["custo_produto"], errors="coerce")
+    vendas["custo_frete"] = pd.to_numeric(vendas["custo_frete"], errors="coerce")
+    vendas["margem_contribuicao"] = pd.to_numeric(vendas["margem_contribuicao"], errors="coerce")
+    marketing["investimento_reais"] = pd.to_numeric(marketing["investimento_reais"], errors="coerce")
+    atendimento["custo_operacional_ticket"] = pd.to_numeric(atendimento["custo_operacional_ticket"], errors="coerce")
+
+    revenue = vendas["receita_liquida"].sum()
+    volume = vendas["quantidade"].sum()
+    price = revenue / volume if volume else 0
+    variable_costs = (vendas["custo_produto"] + vendas["custo_frete"]).sum()
+    fixed_costs = marketing["investimento_reais"].sum() + atendimento["custo_operacional_ticket"].sum()
+    profit = revenue - variable_costs - fixed_costs
+
+    return pd.DataFrame([
+        {"grupo": "Profit", "indicador": "Lucro", "valor": round(profit, 2), "unidade": "R$", "formula": "Receita - Custos Fixos - Custos Variáveis"},
+        {"grupo": "Revenue", "indicador": "Receita total", "valor": round(revenue, 2), "unidade": "R$", "formula": "Preço x Volume"},
+        {"grupo": "Revenue", "indicador": "Volume total", "valor": round(volume, 2), "unidade": "unidades", "formula": "Quantidade vendida"},
+        {"grupo": "Revenue", "indicador": "Preço médio", "valor": round(price, 2), "unidade": "R$/unidade", "formula": "Receita / Volume"},
+        {"grupo": "Costs", "indicador": "Custos fixos", "valor": round(fixed_costs, 2), "unidade": "R$", "formula": "Marketing + Atendimento + estrutura"},
+        {"grupo": "Costs", "indicador": "Custos variáveis", "valor": round(variable_costs, 2), "unidade": "R$", "formula": "Produto + Frete"},
+        {"grupo": "Costs", "indicador": "Margem de contribuição total", "valor": round(vendas["margem_contribuicao"].sum(), 2), "unidade": "R$", "formula": "Receita líquida - custos variáveis"},
+        {"grupo": "Formula", "indicador": "Fórmula central", "valor": "Lucro = (Preço x Volume) - (Custos Fixos + Custos Variáveis)", "unidade": "-", "formula": "Framework de rentabilidade"},
+    ])
+
+
 def main() -> None:
     BASE_DATA_DIR.mkdir(exist_ok=True)
     RESPOSTA_DIR.mkdir(exist_ok=True)
@@ -157,13 +190,19 @@ def main() -> None:
     consolidado.to_csv(OUTPUT_DETALHADO, index=False, encoding="utf-8")
     clientes_ativos.to_csv(OUTPUT_CLIENTES_ATIVOS, index=False, encoding="utf-8")
 
+    profitability_df = montar_tabela_profitability()
+    profitability_df.to_csv(OUTPUT_PROFITABILITY, index=False, encoding="utf-8")
+
     print(f"Arquivo gerado: {OUTPUT_SUMARIO}")
     print(f"Arquivo gerado: {OUTPUT_DETALHADO}")
     print(f"Arquivo gerado: {OUTPUT_CLIENTES_ATIVOS}")
+    print(f"Arquivo gerado: {OUTPUT_PROFITABILITY}")
     print(f"Clientes totais: {len(consolidado)}")
     print(f"Clientes ativos: {len(clientes_ativos)}")
     print("\nPreview dos indicadores:")
     print(resumo_df.head(15).to_string(index=False))
+    print("\nTabela de lucratividade:")
+    print(profitability_df.to_string(index=False))
 
 
 if __name__ == "__main__":
