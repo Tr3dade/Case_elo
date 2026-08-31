@@ -5,7 +5,7 @@ Este projeto organiza as bases de dados de origem em uma pasta dedicada e gera a
 ## Estrutura do projeto
 
 - `base/` — arquivos CSV utilizados como fonte de dados para análise
-- `resposta/` — arquivos gerados após processamento e consolidação
+- `saida/` — arquivos gerados após processamento e consolidação
 - `consolidar_tabelas.py` — script principal que lê as bases, consolida os dados e exporta as saídas
 
 ## Tabelas de entrada (`base/`)
@@ -118,7 +118,7 @@ Colunas principais:
 
 Uso: permite avaliar qualidade do atendimento, custos operacionais e principais causas de insatisfação.
 
-## Arquivos de saída (`resposta/`)
+### Arquivos de saída (`saida/`)
 
 ### `indicadores_resumo.csv`
 Tabela com indicadores agregados por área (Clientes, Vendas, Marketing, Estoque e Atendimento).
@@ -164,7 +164,7 @@ O script executa as seguintes etapas:
    - volume e status de estoque
 5. Consolida as bases de clientes e vendas por `customer_id`.
 6. Gera uma base completa e outra base filtrada para clientes ativos.
-7. Exporta os arquivos CSV para a pasta `resposta/`.
+7. Exporta os arquivos CSV para a pasta `saida/`.
 
 ## Como executar
 
