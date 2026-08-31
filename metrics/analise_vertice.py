@@ -2,10 +2,12 @@ import os
 import pandas as pd
 
 # ============================================================================
-# CONFIG — ajuste os caminhos se necessário
+# CONFIG — ancorado na localização deste arquivo, não no diretório de onde
+# o comando "python3 ..." é chamado (funciona rodando de metrics/ ou da raiz)
 # ============================================================================
-PASTA_DADOS = "./base"     # pasta onde estão os arquivos .csv originais
-PASTA_SAIDA = "./saida/analise_vertice" # pasta onde os resultados serão salvos
+PASTA_SCRIPT = os.path.dirname(os.path.abspath(__file__))
+PASTA_DADOS = os.path.join(PASTA_SCRIPT, "..", "data")
+PASTA_SAIDA = os.path.join(PASTA_SCRIPT, "output", "analise_vertice")
 
 ARQ_VENDAS = os.path.join(PASTA_DADOS, "vendas.csv")
 ARQ_MARKETING = os.path.join(PASTA_DADOS, "marketing.csv")

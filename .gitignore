@@ -1,5 +1,6 @@
 # Ignora os dados gerados na pasta de saídas
 saida/
+metrics/output
 
 # Python cache
 __pycache__/

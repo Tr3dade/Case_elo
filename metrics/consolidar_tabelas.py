@@ -3,8 +3,8 @@ import pandas as pd
 
 
 BASE_DIR = Path(__file__).resolve().parent
-BASE_DATA_DIR = BASE_DIR / "base"
-SAIDA_DIR = BASE_DIR / "saida"
+BASE_DATA_DIR = BASE_DIR.parent / "data"    # antes: BASE_DIR / "base"
+SAIDA_DIR = BASE_DIR / "output"             # antes: BASE_DIR / "saida"
 CONSOLIDAR_DIR = SAIDA_DIR / "consolidar_tabelas"
 OUTPUT_SUMARIO = CONSOLIDAR_DIR / "indicadores_resumo.csv"
 OUTPUT_DETALHADO = CONSOLIDAR_DIR / "dados_consolidados.csv"
