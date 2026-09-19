@@ -54,6 +54,22 @@ def format_pct(value):
     return f"{value:.1f}%"
 
 
+def theme_tokens():
+    streamlit_theme = getattr(st.context, "theme", {})
+    theme_type = streamlit_theme.get("type") or streamlit_theme.get("base") or "light"
+    if theme_type == "dark":
+        return {
+            "app_bg": "#0f172a", "surface": "#172033", "text": "#f8fafc",
+            "muted": "#cbd5e1", "border": "#334155", "chart_bg": "#1e293b",
+            "chart_text": "#f8fafc", "chart_shadow": "#020617", "grid": "rgba(255,255,255,0.18)",
+        }
+    return {
+        "app_bg": "#ffffff", "surface": "#ffffff", "text": "#111827",
+        "muted": "#4b5563", "border": "#e5e7eb", "chart_bg": "#e8eef7",
+        "chart_text": "#1f2937", "chart_shadow": "#ffffff", "grid": "rgba(15,23,42,0.14)",
+    }
+
+
 @st.cache_data
 def carregar_pedidos_marketplace():
     return pd.read_csv(os.path.join(DATA_DIR, "marketplace_pedidos.csv"))
@@ -63,12 +79,12 @@ def metric_card(label, value, subtitle, accent="#6d5ef5"):
     st.markdown(
         f"""
         <div style="
-            background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 16px 18px;
+            background: var(--secondary-background-color); border: 1px solid var(--border-color); border-radius: 16px; padding: 16px 18px;
             min-height: 120px; margin-bottom: 12px; box-shadow: 0 3px 10px rgba(15,23,42,0.05);
         ">
             <div style="font-size: 11px; font-weight: 800; letter-spacing: 0.12em; color: {accent}; text-transform: uppercase; margin-bottom: 10px;">{label}</div>
-            <div style="font-size: 30px; font-weight: 800; color: #111827; margin-bottom: 6px;">{value}</div>
-            <div style="font-size: 12px; color: #6b7280;">{subtitle}</div>
+            <div style="font-size: 30px; font-weight: 800; color: var(--text-color); margin-bottom: 6px;">{value}</div>
+            <div style="font-size: 12px; color: var(--text-color); opacity: 0.72;">{subtitle}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -79,9 +95,9 @@ def highlight_box(title, bullets, accent="#dbeafe"):
     items = "".join(f"<li>{b}</li>" for b in bullets)
     st.markdown(
         f"""
-        <div style="background: {accent}; border: 1px solid rgba(15,23,42,0.08); border-left: 7px solid #2563eb; border-radius: 18px; padding: 18px 20px; min-height: 190px; margin-bottom: 16px; box-shadow: 0 8px 20px rgba(15,23,42,0.08);">
-            <div style="display: inline-block; background: #ffffff; color: #0f172a; border: 1px solid rgba(15,23,42,0.08); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 999px; padding: 8px 15px; font-size: 11px; margin-bottom: 14px; box-shadow: 0 2px 5px rgba(15,23,42,0.06);">{title}</div>
-            <ul style="margin: 0; padding-left: 20px; line-height: 1.9; font-size: 15px; font-weight: 600; color: #0f172a;">
+        <div style="background: color-mix(in srgb, {accent} 28%, var(--background-color)); border: 1px solid var(--border-color); border-left: 7px solid #2563eb; border-radius: 18px; padding: 18px 20px; min-height: 190px; margin-bottom: 16px; box-shadow: 0 8px 20px rgba(15,23,42,0.08);">
+            <div style="display: inline-block; background: var(--secondary-background-color); color: var(--text-color); border: 1px solid var(--border-color); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 999px; padding: 8px 15px; font-size: 11px; margin-bottom: 14px; box-shadow: 0 2px 5px rgba(15,23,42,0.06);">{title}</div>
+            <ul style="margin: 0; padding-left: 20px; line-height: 1.9; font-size: 15px; font-weight: 600; color: var(--text-color);">
                 {items}
             </ul>
         </div>
@@ -91,37 +107,39 @@ def highlight_box(title, bullets, accent="#dbeafe"):
 
 
 def build_bar_chart(title, categories, values, color="#6d5ef5"):
+    theme = theme_tokens()
     option = {
-        "backgroundColor": "#e8eef7",
-        "title": {"text": title, "left": "center", "top": 12, "textStyle": {"fontSize": 22, "fontWeight": "700", "color": "#ffffff", "textShadowColor": "#334155", "textShadowBlur": 4}},
+        "backgroundColor": theme["chart_bg"],
+        "title": {"text": title, "left": "center", "top": 12, "textStyle": {"fontSize": 22, "fontWeight": "700", "color": theme["chart_text"], "textShadowColor": theme["chart_shadow"], "textShadowBlur": 4}},
         "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
         "grid": {"left": "8%", "right": "4%", "bottom": "14%", "top": "26%", "containLabel": True},
-        "xAxis": {"type": "category", "data": categories, "axisLine": {"lineStyle": {"color": "#ffffff"}}, "axisLabel": {"color": "#ffffff", "fontSize": 14, "fontWeight": "600", "interval": 0, "textShadowColor": "#334155", "textShadowBlur": 4}},
-        "yAxis": {"type": "value", "axisLine": {"lineStyle": {"color": "#ffffff"}}, "splitLine": {"lineStyle": {"color": "rgba(255,255,255,0.35)"}}, "axisLabel": {"color": "#ffffff", "fontSize": 13, "textShadowColor": "#334155", "textShadowBlur": 4}},
+        "xAxis": {"type": "category", "data": categories, "axisLine": {"lineStyle": {"color": theme["chart_text"]}}, "axisLabel": {"color": theme["chart_text"], "fontSize": 14, "fontWeight": "600", "interval": 0, "textShadowColor": theme["chart_shadow"], "textShadowBlur": 4}},
+        "yAxis": {"type": "value", "axisLine": {"lineStyle": {"color": theme["chart_text"]}}, "splitLine": {"lineStyle": {"color": theme["grid"]}}, "axisLabel": {"color": theme["chart_text"], "fontSize": 13, "textShadowColor": theme["chart_shadow"], "textShadowBlur": 4}},
         "series": [{
             "type": "bar",
             "barWidth": "52%",
             "data": values,
             "itemStyle": {"color": color, "borderRadius": [8, 8, 0, 0]},
-            "label": {"show": True, "position": "top", "fontSize": 13, "fontWeight": "600", "color": "#ffffff", "textShadowColor": "#334155", "textShadowBlur": 4},
+            "label": {"show": True, "position": "top", "fontSize": 13, "fontWeight": "600", "color": theme["chart_text"], "textShadowColor": theme["chart_shadow"], "textShadowBlur": 4},
         }],
     }
     return option
 
 
 def build_pie_chart(title, data_dict, colors):
+    theme = theme_tokens()
     option = {
-        "backgroundColor": "#e8eef7",
-        "title": {"text": title, "left": "center", "top": 12, "textStyle": {"fontSize": 22, "fontWeight": "700", "color": "#ffffff", "textShadowColor": "#334155", "textShadowBlur": 4}},
+        "backgroundColor": theme["chart_bg"],
+        "title": {"text": title, "left": "center", "top": 12, "textStyle": {"fontSize": 22, "fontWeight": "700", "color": theme["chart_text"], "textShadowColor": theme["chart_shadow"], "textShadowBlur": 4}},
         "tooltip": {"trigger": "item", "formatter": "{b}: {d}%"},
-        "legend": {"bottom": 0, "left": "center", "textStyle": {"fontSize": 13, "color": "#ffffff", "textShadowColor": "#334155", "textShadowBlur": 4}},
+        "legend": {"bottom": 0, "left": "center", "textStyle": {"fontSize": 13, "color": theme["chart_text"], "textShadowColor": theme["chart_shadow"], "textShadowBlur": 4}},
         "series": [{
             "type": "pie",
             "radius": ["42%", "72%"],
             "center": ["50%", "54%"],
             "avoidLabelOverlap": False,
             "itemStyle": {"borderRadius": 8, "borderColor": "#fff", "borderWidth": 2},
-            "label": {"show": True, "formatter": "{b}: {d}%", "fontSize": 13, "fontWeight": "600", "color": "#ffffff", "textShadowColor": "#334155", "textShadowBlur": 4},
+            "label": {"show": True, "formatter": "{b}: {d}%", "fontSize": 13, "fontWeight": "600", "color": theme["chart_text"], "textShadowColor": theme["chart_shadow"], "textShadowBlur": 4},
             "data": [{"value": int(v), "name": k, "itemStyle": {"color": colors[i]}} for i, (k, v) in enumerate(data_dict.items())],
         }],
     }
@@ -129,6 +147,7 @@ def build_pie_chart(title, data_dict, colors):
 
 
 def build_line_chart(title, labels, values, color="#3fbf9f", highlight=None):
+    theme = theme_tokens()
     series = {
         "type": "line",
         "smooth": True,
@@ -149,12 +168,12 @@ def build_line_chart(title, labels, values, color="#3fbf9f", highlight=None):
         }
 
     option = {
-        "backgroundColor": "#e8eef7",
-        "title": {"text": title, "left": "center", "top": 12, "textStyle": {"fontSize": 22, "fontWeight": "700", "color": "#ffffff", "textShadowColor": "#334155", "textShadowBlur": 4}},
+        "backgroundColor": theme["chart_bg"],
+        "title": {"text": title, "left": "center", "top": 12, "textStyle": {"fontSize": 22, "fontWeight": "700", "color": theme["chart_text"], "textShadowColor": theme["chart_shadow"], "textShadowBlur": 4}},
         "tooltip": {"trigger": "axis"},
         "grid": {"left": "8%", "right": "4%", "bottom": "14%", "top": "26%", "containLabel": True},
-        "xAxis": {"type": "category", "boundaryGap": False, "data": labels, "axisLine": {"lineStyle": {"color": "#ffffff"}}, "axisLabel": {"color": "#ffffff", "fontSize": 14, "fontWeight": "600", "textShadowColor": "#334155", "textShadowBlur": 4}},
-        "yAxis": {"type": "value", "axisLine": {"lineStyle": {"color": "#ffffff"}}, "splitLine": {"lineStyle": {"color": "rgba(255,255,255,0.35)"}}, "axisLabel": {"color": "#ffffff", "fontSize": 13, "textShadowColor": "#334155", "textShadowBlur": 4}},
+        "xAxis": {"type": "category", "boundaryGap": False, "data": labels, "axisLine": {"lineStyle": {"color": theme["chart_text"]}}, "axisLabel": {"color": theme["chart_text"], "fontSize": 14, "fontWeight": "600", "textShadowColor": theme["chart_shadow"], "textShadowBlur": 4}},
+        "yAxis": {"type": "value", "axisLine": {"lineStyle": {"color": theme["chart_text"]}}, "splitLine": {"lineStyle": {"color": theme["grid"]}}, "axisLabel": {"color": theme["chart_text"], "fontSize": 13, "textShadowColor": theme["chart_shadow"], "textShadowBlur": 4}},
         "series": [series],
     }
     return option
@@ -244,10 +263,19 @@ def render_simulador_frete():
 
 st.set_page_config(page_title="Dashboard Executivo — Vértice Retail", layout="wide")
 
+theme = theme_tokens()
+
 st.markdown(
     """
     <style>
-        .stApp { background: #ffffff; }
+        :root { color-scheme: light dark; }
+        .stApp,
+        [data-testid="stAppViewContainer"],
+        [data-testid="stHeader"] {
+            background: var(--background-color) !important;
+            color: var(--text-color) !important;
+        }
+        [data-testid="stDecoration"] { background: var(--primary-color) !important; }
         [data-testid="stSidebar"] {
             background: #111827;
             color: white;
@@ -265,14 +293,23 @@ st.markdown(
         .dashboard-title {
             font-size: 2.4rem;
             font-weight: 800;
-            color: #111827;
+            color: var(--text-color) !important;
             margin: 0;
         }
         .dashboard-subtitle {
-            color: #4b5563;
+            color: var(--text-color) !important;
+            opacity: 0.72;
             font-size: 1rem;
             margin-top: 0.3rem;
             margin-bottom: 1.5rem;
+        }
+        [data-testid="stMarkdownContainer"] h2,
+        [data-testid="stMarkdownContainer"] h3,
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stCaptionContainer"],
+        [data-testid="stSlider"] label,
+        [data-testid="stNumberInput"] label {
+            color: var(--text-color) !important;
         }
         .nav-label {
             font-size: 12px;
@@ -497,4 +534,3 @@ elif menu == "Atendimento":
     top_problems = atendimento["categoria_problema"].value_counts().head(5)
     render_chart("bar", "Principais problemas de atendimento", [str(x) for x in top_problems.index], [int(v) for v in top_problems.values], color="#ff9f43")
 
-st.caption("Fonte: dados internos do protótipo Vértice Retail")
