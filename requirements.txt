@@ -16,6 +16,7 @@ litellm>=1.70
 pydantic>=2.7,<3.0
 typing-extensions>=4.12
 streamlit
+streamlit-option-menu
 anthropic
 python-dotenv
 pytest
