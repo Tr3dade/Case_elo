@@ -9,6 +9,7 @@ Funções, uma responsabilidade cada:
     criar_llm        ÚNICO lugar que configura a conexão com a Sandbox (usado por aqui e pelo agente).
     chamar_llm       uma chamada ao modelo + registro de tokens/custo. Levanta exceção se falhar.
     gerar_relatorio  ponto de entrada: monta, loga, chama, trata falha. Sempre devolve um texto.
+    gerar_relatorio_detalhado  o mesmo, mas devolve também se caiu no texto-modelo, o motivo e o run_id.
 """
 import logging
 import os
@@ -186,8 +187,15 @@ def _causa_raiz(erro: BaseException) -> str:
     return f"{type(erro).__name__}: {str(erro)[:150]}"
 
 
-def gerar_relatorio(resultado: dict) -> str:
-    """Ponto de entrada: qualquer front chama só esta função e sempre recebe um texto.
+def gerar_relatorio_detalhado(resultado: dict) -> dict:
+    """Faz o que gerar_relatorio faz e devolve, além do texto, o que a tela precisa para ser honesta.
+
+    Devolve {texto, fallback, motivo_fallback, run_id}:
+        texto            o parágrafo (da IA, ou o texto-modelo se a IA falhou)
+        fallback         True se o texto é o texto-modelo e não uma resposta do modelo
+        motivo_fallback  o tipo do erro (ex. "ConnectionError"), ou None se não caiu no fallback. Só o tipo,
+                         como o log: a mensagem completa pode conter trecho da chave e fica só no terminal
+        run_id           a execução no uso_api.csv: com ele o front mostra o custo desta chamada
 
     Fluxo: monta o prompt -> loga -> chama o LLM -> loga a resposta -> devolve.
     Se o LLM falhar, devolve o texto reserva em vez de derrubar a tela, e o log marca FALLBACK
@@ -200,6 +208,7 @@ def gerar_relatorio(resultado: dict) -> str:
     # O prompt já termina com quebra de linha, então a cerca de fechamento vem logo depois dele.
     registrar_log(f"\n---\n**Prompt** ({VERSAO_RELATORIO}, {momento}):\n```text\n{prompt}```\n")
 
+    motivo_fallback = None
     try:
         texto = chamar_llm(prompt, run_id)
         registrar_log(f"\n**Resposta:**\n{texto}\n")
@@ -208,8 +217,19 @@ def gerar_relatorio(resultado: dict) -> str:
         # O log, que é entregável, leva apenas o tipo do erro.
         logger.warning("LLM falhou (%s). Causa raiz: %s", type(erro).__name__, _causa_raiz(erro))
         texto = texto_reserva(resultado)
-        registrar_log(f"\n**Resposta (FALLBACK, {type(erro).__name__}):**\n{texto}\n")
-    return texto
+        motivo_fallback = type(erro).__name__
+        registrar_log(f"\n**Resposta (FALLBACK, {motivo_fallback}):**\n{texto}\n")
+    return {"texto": texto, "fallback": motivo_fallback is not None,
+            "motivo_fallback": motivo_fallback, "run_id": run_id}
+
+
+def gerar_relatorio(resultado: dict) -> str:
+    """Ponto de entrada simples: qualquer front chama só esta função e sempre recebe um texto.
+
+    É gerar_relatorio_detalhado sem os metadados (o texto, o log e o registro de uso são os mesmos).
+    Use a versão detalhada quando a tela precisar saber se o texto veio da IA ou do texto-modelo.
+    """
+    return gerar_relatorio_detalhado(resultado)["texto"]
 
 
 if __name__ == "__main__":

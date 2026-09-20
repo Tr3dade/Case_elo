@@ -3,6 +3,8 @@ redireciona o prompts_log.md e o uso_api.csv para uma pasta temporária.
 
 O resultado abaixo é o do cenário R$250 já validado (escrito à mão, para o teste não depender dos CSVs).
 """
+import re
+
 import pandas as pd
 import pytest
 from langchain_core.messages import AIMessage
@@ -148,3 +150,49 @@ def test_causa_raiz_desce_ate_o_erro_mais_interno():
         topo = ConnectionError("Connection error")
         topo.__cause__ = meio
     assert relatorio._causa_raiz(topo) == "ValueError: fundo do poço"
+
+
+# ---------- gerar_relatorio_detalhado ----------
+def test_detalhado_devolve_texto_selo_motivo_e_run_id_no_fluxo_normal(monkeypatch):
+    usar_llm(monkeypatch, AIMessage(content=TEXTO_OK, usage_metadata=USO))
+
+    r = relatorio.gerar_relatorio_detalhado(RESULTADO_250)
+
+    assert set(r) == {"texto", "fallback", "motivo_fallback", "run_id"}
+    assert r["texto"] == TEXTO_OK and r["fallback"] is False and r["motivo_fallback"] is None
+    assert list(uso()["run_id"]) == [r["run_id"]]              # o run_id casa com a linha do CSV de uso
+
+
+def test_detalhado_marca_fallback_e_guarda_so_o_tipo_do_erro(monkeypatch):
+    usar_llm(monkeypatch, ConnectionError("Sandbox indisponível"))
+
+    r = relatorio.gerar_relatorio_detalhado(RESULTADO_250)
+
+    assert r["fallback"] is True and r["motivo_fallback"] == "ConnectionError"
+    assert "Texto-modelo" in r["texto"] and "159.556,45" in r["texto"]
+    assert "Sandbox indisponível" not in str(r)                # a mensagem completa não sai do terminal
+    assert list(uso()["run_id"]) == [r["run_id"]]
+
+
+@pytest.mark.parametrize("conteudo", ["", "ok"])
+def test_detalhado_trata_resposta_curta_como_fallback_do_tipo_resposta_invalida(monkeypatch, conteudo):
+    usar_llm(monkeypatch, AIMessage(content=conteudo, usage_metadata=USO))
+    r = relatorio.gerar_relatorio_detalhado(RESULTADO_250)
+    assert r["fallback"] is True and r["motivo_fallback"] == "RespostaInvalida"
+
+
+@pytest.mark.parametrize("resposta", [AIMessage(content=TEXTO_OK, usage_metadata=USO), ConnectionError("fora do ar")])
+def test_gerar_relatorio_e_o_detalhado_sem_os_metadados(monkeypatch, tmp_path, resposta):
+    """gerar_relatorio continua devolvendo só o texto, com o mesmo log e o mesmo registro de uso."""
+    usar_llm(monkeypatch, resposta)
+    texto = relatorio.gerar_relatorio(RESULTADO_250)
+    log_simples, uso_simples = log(), uso().drop(columns=["data_hora", "run_id", "segundos"])
+
+    monkeypatch.setattr(relatorio, "LOG_PATH", str(tmp_path / "log2.md"))
+    monkeypatch.setattr(uso_api, "USO_PATH", str(tmp_path / "uso2.csv"))
+    detalhado = relatorio.gerar_relatorio_detalhado(RESULTADO_250)
+
+    assert isinstance(texto, str) and texto == detalhado["texto"]
+    momento = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}"
+    assert re.sub(momento, "<DATA>", log_simples) == re.sub(momento, "<DATA>", log())
+    pd.testing.assert_frame_equal(uso_simples, uso().drop(columns=["data_hora", "run_id", "segundos"]))
