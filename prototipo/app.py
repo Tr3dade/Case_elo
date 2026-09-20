@@ -331,21 +331,30 @@ def render_painel_gestor():
     categoria_margem = vendas_2023.groupby("categoria")["margem_contribuicao"].sum().sort_values(ascending=False)
     categoria_ticket = categoria_receita / vendas_2023.groupby("categoria")["order_id"].nunique()
 
+    vendas_roas = vendas[
+        vendas["status_pagamento"].eq("Aprovado") & ~vendas["devolvido"].fillna(False).astype(bool)
+    ].copy()
     canais_vendas = vendas["canal"].dropna().astype(str).str.strip().drop_duplicates().tolist()
+    receita_aprovada_por_canal = vendas_roas.groupby("canal").agg(
+        receita_liquida=("receita_liquida", "sum"),
+        vendas_validas=("order_id", "nunique"),
+    )
     roas_canal = (
         marketing.groupby("canal", as_index=True)
-        .agg(receita_gerada=("receita_gerada", "sum"), investimento=("investimento_reais", "sum"))
-        .assign(roas=lambda dados: dados["receita_gerada"] / dados["investimento"])
+        .agg(investimento=("investimento_reais", "sum"))
+        .join(receita_aprovada_por_canal)
         .reindex(canais_vendas)
+        .fillna({"receita_liquida": 0.0, "vendas_validas": 0.0})
+        .assign(roas=lambda dados: dados["receita_liquida"] / dados["investimento"])
         .dropna(subset=["roas"])
         .sort_values("roas", ascending=False)
     )
-    vendas_por_canal = vendas.groupby("canal")["order_id"].nunique()
+    vendas_por_canal = roas_canal["vendas_validas"]
     roas_max = roas_canal["roas"].max() if not roas_canal.empty else 1
     roas_rows = "".join(
         f"<div style='font-size:0.8rem; color:#4b5563;'>"
         f"<div style='display:flex; justify-content:space-between; align-items:center; gap:0.5rem;'>"
-        f"<span><strong style='color:#111827;'>{canal}</strong>&nbsp;&nbsp;<span style='color:#8b929d;'>{vendas_por_canal.get(canal, 0):,.0f} vendas</span></span>"
+        f"<span><strong style='color:#111827;'>{canal}</strong>&nbsp;&nbsp;<span style='color:#8b929d;'>{vendas_por_canal.get(canal, 0):,.0f} vendas válidas</span></span>"
         f"<span style='font-weight:700; color:#374151;'>{roas:.2f}x</span></div>"
         f"<div style='width:100%; height:6px; margin-top:0.25rem; border-radius:999px; background:linear-gradient(90deg, #2f7f64 0%, #2f7f64 {roas / roas_max * 100:.1f}%, #e5e7eb {roas / roas_max * 100:.1f}%);'></div></div>"
         for canal, roas in roas_canal["roas"].items()
