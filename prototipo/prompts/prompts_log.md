@@ -422,3 +422,183 @@ Recomenda-se a adoção do threshold de R$ 275 para o canal Marketplace por apre
 **Threshold recomendado:** R$ 275.0
 
 **Resultado:** ok (6 passos, 5 ações de ferramenta)
+
+---
+## Agente [agente-v3] (run 20260920-123411-dcb2, 2026-09-20 12:34:11)
+**Prompt:**
+Você é um analista de precificação de frete da Vértice Retail. Sua tarefa é recomendar UM threshold de frete grátis para o canal Marketplace (pedidos com receita bruta maior ou igual ao threshold ficam isentos de frete).
+
+CONTEXTO
+- Hoje 100% dos pedidos do Marketplace pagam frete (cerca de R$ 32 por remessa) e isso pesa na margem. Nos canais próprios a isenção de frete já existe.
+- A meta NÃO é maximizar a isenção. É fazer o Marketplace reproduzir o perfil dos canais próprios: a mesma proporção de pedidos isentos e o mesmo peso do frete na receita. Nenhum canal próprio isenta frete abaixo do menor valor observado (a observação do perfil informa qual é), então thresholds abaixo disso são extrapolação e não podem ser recomendados.
+
+COMO VOCÊ TRABALHA
+Você conversa com um programa, não com uma pessoa. A cada turno responda com UM único objeto JSON, sem texto antes ou depois e sem cercas de código. O programa executa a ação e devolve a observação na mensagem seguinte. As únicas ações que existem:
+{"acao": "perfil_canais_proprios", "raciocinio": "<uma frase: por que esta ação>"}  -> mostra a política dos canais próprios e o ALVO que o Marketplace deve reproduzir (% de pedidos isentos, peso do frete na receita, margem recuperada). Use primeiro.
+{"acao": "simular_threshold", "threshold": <valor de 0 a 1500>, "raciocinio": "<uma frase: por que este valor>"}  -> mede o efeito desse threshold no Marketplace, o desvio em relação ao alvo e se ele tem evidência nos dados (zona_com_evidencia).
+{"acao": "concluir", "threshold_recomendado": <o threshold escolhido>, "memo": "<texto>"}  -> encerra com o memo executivo. O threshold_recomendado deve ser um dos que você simulou.
+Você NÃO tem outras ferramentas: não busque arquivos, não use a web, não execute código, não consulte skills nem conhecimento externo. Tudo de que precisa vem das observações.
+
+REGRAS
+- Comece por perfil_canais_proprios e leia a rampa de isenção dos canais próprios: identifique (a) o LIMITE INFERIOR, o menor valor de pedido em que a isenção passa de zero, e (b) o LIMITE SUPERIOR, o valor de pedido a partir do qual a isenção chega a 100%. Simule esses dois limites primeiro e depois refine entre eles em torno do que mais se aproximar do alvo.
+- Em toda ação de ferramenta preencha "raciocinio" com UMA frase objetiva dizendo por que você a escolheu, citando apenas números que você já viu nas observações. Nas duas primeiras simulações, diga onde na rampa você identificou o limite. Esse texto é registrado para auditoria.
+- No máximo 5 ações de ferramenta no total. Quando tiver dados suficientes, envie concluir.
+- Escolha o threshold com o menor desvio em relação ao alvo. Só recomende threshold com zona_com_evidencia = true.
+- Copie os números exatamente como as observações devolvem (já estão no formato brasileiro). Não invente, arredonde nem calcule números novos.
+- O memo tem de 5 a 7 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, o caminho percorrido em 1 ou 2 frases (quais limites da rampa você identificou, quais thresholds testou, na ordem, e por que o escolhido venceu), ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional.
+
+**Missão:** Recomende o threshold de frete grátis para o canal Marketplace.
+
+**Passo 1**: `perfil_canais_proprios({})` → {"menor_threshold_observado": "R$ 250", "canais_proprios": [{"canal": "Email Marketing", "pedidos": 2812, "pct_pedidos_com_frete": "21,1%", "frete_pct_receita": "1,00%"}, {"canal": "Google Ads", "pedidos": 5504, "pct_pedidos_com_frete": "20,6%", "frete_pct_receita": "1,01%"}, {"canal": "Influenciador", "pedidos": 2263, "pct_pedidos_com_frete": "11,8%", "frete_pct_receita": "0,42%"}, {"canal": "Instagram Ads", "pedidos": 4965, "pct_pedidos_com_frete": "21,4%", "frete_pct_receita": "1,04%"}, {"can…
+  ↳ raciocínio: Preciso identificar o perfil alvo dos canais próprios e a rampa de isenção para definir os limites de simulação.
+
+**Passo 2**: `simular_threshold({"threshold": 250})` → {"threshold": 250, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "81,1%", "margem_recuperada": "R$ 159.556,45", "frete_restante": "R$ 37.165,00", "frete_pct_receita": "0,93%", "desvio_vs_alvo": {"pct_pedidos_isentos": "+3,1 p.p.", "frete_pct_receita": "-0,15 p.p."}}
+  ↳ raciocínio: Identifiquei o limite inferior da rampa em R$ 250, onde a isenção passa de zero para 69,5% nos canais próprios.
+
+**Passo 3**: `simular_threshold({"threshold": 450})` → {"threshold": 450, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "61,0%", "margem_recuperada": "R$ 120.030,53", "frete_restante": "R$ 76.690,92", "frete_pct_receita": "1,92%", "desvio_vs_alvo": {"pct_pedidos_isentos": "-17,0 p.p.", "frete_pct_receita": "+0,84 p.p."}}
+  ↳ raciocínio: Identifiquei o limite superior da rampa em R$ 450, valor a partir do qual a isenção chega a 100,0% nos canais próprios.
+
+**Passo 4**: `simular_threshold({"threshold": 300})` → {"threshold": 300, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "74,9%", "margem_recuperada": "R$ 147.759,77", "frete_restante": "R$ 48.961,68", "frete_pct_receita": "1,23%", "desvio_vs_alvo": {"pct_pedidos_isentos": "-3,1 p.p.", "frete_pct_receita": "+0,15 p.p."}}
+  ↳ raciocínio: Refinamento entre os limites de R$ 250 e R$ 450 para reduzir os 81,1% de pedidos isentos em direção ao alvo de 78,0%.
+
+**Passo 5**: `simular_threshold({"threshold": 275})` → {"threshold": 275, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "78,1%", "margem_recuperada": "R$ 153.886,48", "frete_restante": "R$ 42.834,97", "frete_pct_receita": "1,07%", "desvio_vs_alvo": {"pct_pedidos_isentos": "+0,1 p.p.", "frete_pct_receita": "-0,01 p.p."}}
+  ↳ raciocínio: Refinamento no ponto médio entre R$ 250 e R$ 300 para buscar o alvo de 78,0% de pedidos isentos e 1,08% de peso do frete.
+
+**Caminho percorrido:**
+Passo 1 — leu o perfil dos canais próprios. Alvo do Marketplace: 78,0% de pedidos isentos, frete em 1,08% da receita.
+   Justificativa do agente: Preciso identificar o perfil alvo dos canais próprios e a rampa de isenção para definir os limites de simulação.
+Passo 2 — simulou R$ 250: 81,1% de pedidos isentos (+3,1 p.p. do alvo), frete em 0,93% da receita (-0,15 p.p.), margem recuperada R$ 159.556,45.
+   Justificativa do agente: Identifiquei o limite inferior da rampa em R$ 250, onde a isenção passa de zero para 69,5% nos canais próprios.
+Passo 3 — simulou R$ 450: 61,0% de pedidos isentos (-17,0 p.p. do alvo), frete em 1,92% da receita (+0,84 p.p.), margem recuperada R$ 120.030,53.
+   Justificativa do agente: Identifiquei o limite superior da rampa em R$ 450, valor a partir do qual a isenção chega a 100,0% nos canais próprios.
+Passo 4 — simulou R$ 300: 74,9% de pedidos isentos (-3,1 p.p. do alvo), frete em 1,23% da receita (+0,15 p.p.), margem recuperada R$ 147.759,77.
+   Justificativa do agente: Refinamento entre os limites de R$ 250 e R$ 450 para reduzir os 81,1% de pedidos isentos em direção ao alvo de 78,0%.
+Passo 5 — simulou R$ 275: 78,1% de pedidos isentos (+0,1 p.p. do alvo), frete em 1,07% da receita (-0,01 p.p.), margem recuperada R$ 153.886,48.
+   Justificativa do agente: Refinamento no ponto médio entre R$ 250 e R$ 300 para buscar o alvo de 78,0% de pedidos isentos e 1,08% de peso do frete.
+
+**Memo:**
+Recomendo a adoção do threshold de R$ 275 para o canal Marketplace por apresentar o menor desvio em relação ao perfil dos canais próprios. Com este valor, o canal atinge 78,1% de pedidos isentos e um peso de frete na receita de 1,07%, aproximando-se quase integralmente do alvo de 78,0% e 1,08%, respectivamente. O processo de definição iniciou com a identificação dos limites da rampa de isenção em R$ 250 e R$ 450, seguido pelos testes dos thresholds 250, 450, 300 e 275. O threshold de R$ 275 foi o vencedor por equilibrar a proporção de isenção e o custo logístico com precisão superior aos demais cenários. O cenário de R$ 450 foi descartado por gerar um desvio excessivo de -17,0 p.p. na quantidade de pedidos isentos, distanciando o Marketplace da realidade dos canais próprios. A implementação desta política projeta uma margem recuperada de R$ 153.886,48. Esta projeção de ganho financeiro assume a premissa de que o comportamento de compra no Marketplace passará a reproduzir fielmente o perfil observado nos canais diretos da Vértice Retail.
+
+**Threshold recomendado:** R$ 275.0
+
+**Resultado:** ok (6 passos, 5 ações de ferramenta)
+
+---
+## Agente [agente-v3] (run 20260920-123547-90c9, 2026-09-20 12:35:47)
+**Prompt:**
+Você é um analista de precificação de frete da Vértice Retail. Sua tarefa é recomendar UM threshold de frete grátis para o canal Marketplace (pedidos com receita bruta maior ou igual ao threshold ficam isentos de frete).
+
+CONTEXTO
+- Hoje 100% dos pedidos do Marketplace pagam frete (cerca de R$ 32 por remessa) e isso pesa na margem. Nos canais próprios a isenção de frete já existe.
+- A meta NÃO é maximizar a isenção. É fazer o Marketplace reproduzir o perfil dos canais próprios: a mesma proporção de pedidos isentos e o mesmo peso do frete na receita. Nenhum canal próprio isenta frete abaixo do menor valor observado (a observação do perfil informa qual é), então thresholds abaixo disso são extrapolação e não podem ser recomendados.
+
+COMO VOCÊ TRABALHA
+Você conversa com um programa, não com uma pessoa. A cada turno responda com UM único objeto JSON, sem texto antes ou depois e sem cercas de código. O programa executa a ação e devolve a observação na mensagem seguinte. As únicas ações que existem:
+{"acao": "perfil_canais_proprios", "raciocinio": "<uma frase: por que esta ação>"}  -> mostra a política dos canais próprios e o ALVO que o Marketplace deve reproduzir (% de pedidos isentos, peso do frete na receita, margem recuperada). Use primeiro.
+{"acao": "simular_threshold", "threshold": <valor de 0 a 1500>, "raciocinio": "<uma frase: por que este valor>"}  -> mede o efeito desse threshold no Marketplace, o desvio em relação ao alvo e se ele tem evidência nos dados (zona_com_evidencia).
+{"acao": "concluir", "threshold_recomendado": <o threshold escolhido>, "memo": "<texto>"}  -> encerra com o memo executivo. O threshold_recomendado deve ser um dos que você simulou.
+Você NÃO tem outras ferramentas: não busque arquivos, não use a web, não execute código, não consulte skills nem conhecimento externo. Tudo de que precisa vem das observações.
+
+REGRAS
+- Comece por perfil_canais_proprios e leia a rampa de isenção dos canais próprios: identifique (a) o LIMITE INFERIOR, o menor valor de pedido em que a isenção passa de zero, e (b) o LIMITE SUPERIOR, o valor de pedido a partir do qual a isenção chega a 100%. Simule esses dois limites primeiro e depois refine entre eles em torno do que mais se aproximar do alvo.
+- Em toda ação de ferramenta preencha "raciocinio" com UMA frase objetiva dizendo por que você a escolheu, citando apenas números que você já viu nas observações. Nas duas primeiras simulações, diga onde na rampa você identificou o limite. Esse texto é registrado para auditoria.
+- No máximo 5 ações de ferramenta no total. Quando tiver dados suficientes, envie concluir.
+- Escolha o threshold com o menor desvio em relação ao alvo. Só recomende threshold com zona_com_evidencia = true.
+- Copie os números exatamente como as observações devolvem (já estão no formato brasileiro). Não invente, arredonde nem calcule números novos.
+- O memo tem de 5 a 7 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, o caminho percorrido em 1 ou 2 frases (quais limites da rampa você identificou, quais thresholds testou, na ordem, e por que o escolhido venceu), ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional.
+
+**Missão:** Recomende o threshold de frete grátis para o canal Marketplace.
+
+**Passo 1**: `perfil_canais_proprios({})` → {"menor_threshold_observado": "R$ 250", "canais_proprios": [{"canal": "Email Marketing", "pedidos": 2812, "pct_pedidos_com_frete": "21,1%", "frete_pct_receita": "1,00%"}, {"canal": "Google Ads", "pedidos": 5504, "pct_pedidos_com_frete": "20,6%", "frete_pct_receita": "1,01%"}, {"canal": "Influenciador", "pedidos": 2263, "pct_pedidos_com_frete": "11,8%", "frete_pct_receita": "0,42%"}, {"canal": "Instagram Ads", "pedidos": 4965, "pct_pedidos_com_frete": "21,4%", "frete_pct_receita": "1,04%"}, {"can…
+  ↳ raciocínio: Identificar os alvos de pedidos isentos e peso do frete, além dos limites da rampa de isenção dos canais próprios.
+
+**Passo 2**: `simular_threshold({"threshold": 250})` → {"threshold": 250, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "81,1%", "margem_recuperada": "R$ 159.556,45", "frete_restante": "R$ 37.165,00", "frete_pct_receita": "0,93%", "desvio_vs_alvo": {"pct_pedidos_isentos": "+3,1 p.p.", "frete_pct_receita": "-0,15 p.p."}}
+  ↳ raciocínio: Simular o limite inferior da rampa de isenção identificado em R$ 250, onde a isenção passa de zero para 69,5%.
+
+**Passo 3**: `simular_threshold({"threshold": 450})` → {"threshold": 450, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "61,0%", "margem_recuperada": "R$ 120.030,53", "frete_restante": "R$ 76.690,92", "frete_pct_receita": "1,92%", "desvio_vs_alvo": {"pct_pedidos_isentos": "-17,0 p.p.", "frete_pct_receita": "+0,84 p.p."}}
+  ↳ raciocínio: Simular o limite superior da rampa de isenção identificado em R$ 450, onde a isenção atinge 100,0%.
+
+**Passo 4**: `simular_threshold({"threshold": 300})` → {"threshold": 300, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "74,9%", "margem_recuperada": "R$ 147.759,77", "frete_restante": "R$ 48.961,68", "frete_pct_receita": "1,23%", "desvio_vs_alvo": {"pct_pedidos_isentos": "-3,1 p.p.", "frete_pct_receita": "+0,15 p.p."}}
+  ↳ raciocínio: Refinar a busca entre os limites simulados testando o valor de R$ 300 para aproximar o percentual de isentos ao alvo de 78,0%.
+
+**Passo 5**: `simular_threshold({"threshold": 275})` → {"threshold": 275, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "78,1%", "margem_recuperada": "R$ 153.886,48", "frete_restante": "R$ 42.834,97", "frete_pct_receita": "1,07%", "desvio_vs_alvo": {"pct_pedidos_isentos": "+0,1 p.p.", "frete_pct_receita": "-0,01 p.p."}}
+  ↳ raciocínio: Testar o ponto médio entre R$ 250 e R$ 300 para buscar o menor desvio absoluto em relação ao alvo de 78,0% de pedidos isentos.
+
+**Caminho percorrido:**
+Passo 1 — leu o perfil dos canais próprios. Alvo do Marketplace: 78,0% de pedidos isentos, frete em 1,08% da receita.
+   Justificativa do agente: Identificar os alvos de pedidos isentos e peso do frete, além dos limites da rampa de isenção dos canais próprios.
+Passo 2 — simulou R$ 250: 81,1% de pedidos isentos (+3,1 p.p. do alvo), frete em 0,93% da receita (-0,15 p.p.), margem recuperada R$ 159.556,45.
+   Justificativa do agente: Simular o limite inferior da rampa de isenção identificado em R$ 250, onde a isenção passa de zero para 69,5%.
+Passo 3 — simulou R$ 450: 61,0% de pedidos isentos (-17,0 p.p. do alvo), frete em 1,92% da receita (+0,84 p.p.), margem recuperada R$ 120.030,53.
+   Justificativa do agente: Simular o limite superior da rampa de isenção identificado em R$ 450, onde a isenção atinge 100,0%.
+Passo 4 — simulou R$ 300: 74,9% de pedidos isentos (-3,1 p.p. do alvo), frete em 1,23% da receita (+0,15 p.p.), margem recuperada R$ 147.759,77.
+   Justificativa do agente: Refinar a busca entre os limites simulados testando o valor de R$ 300 para aproximar o percentual de isentos ao alvo de 78,0%.
+Passo 5 — simulou R$ 275: 78,1% de pedidos isentos (+0,1 p.p. do alvo), frete em 1,07% da receita (-0,01 p.p.), margem recuperada R$ 153.886,48.
+   Justificativa do agente: Testar o ponto médio entre R$ 250 e R$ 300 para buscar o menor desvio absoluto em relação ao alvo de 78,0% de pedidos isentos.
+
+**Memo:**
+O threshold de frete grátis recomendado para o canal Marketplace é de R$ 275. Este valor resulta em 78,1% de pedidos isentos e um peso do frete na receita de 1,07%, aproximando-se quase perfeitamente dos alvos de 78,0% e 1,08%. A análise identificou os limites da rampa de isenção em R$ 250 e R$ 450, testando em sequência os thresholds de 250, 450, 300 e 275. O valor de R$ 275 foi escolhido por apresentar o menor desvio absoluto em relação ao perfil alvo dos canais próprios. O cenário de R$ 450 foi descartado por apresentar um desvio negativo elevado de -17,0 p.p. na proporção de pedidos isentos. A recuperação de margem de R$ 153.886,48 é baseada na premissa de que o Marketplace passará a reproduzir o comportamento de compra observado nos canais próprios.
+
+**Threshold recomendado:** R$ 275.0
+
+**Resultado:** ok (6 passos, 5 ações de ferramenta)
+
+---
+## Agente [agente-v3] (run 20260920-123715-e3b1, 2026-09-20 12:37:15)
+**Prompt:**
+Você é um analista de precificação de frete da Vértice Retail. Sua tarefa é recomendar UM threshold de frete grátis para o canal Marketplace (pedidos com receita bruta maior ou igual ao threshold ficam isentos de frete).
+
+CONTEXTO
+- Hoje 100% dos pedidos do Marketplace pagam frete (cerca de R$ 32 por remessa) e isso pesa na margem. Nos canais próprios a isenção de frete já existe.
+- A meta NÃO é maximizar a isenção. É fazer o Marketplace reproduzir o perfil dos canais próprios: a mesma proporção de pedidos isentos e o mesmo peso do frete na receita. Nenhum canal próprio isenta frete abaixo do menor valor observado (a observação do perfil informa qual é), então thresholds abaixo disso são extrapolação e não podem ser recomendados.
+
+COMO VOCÊ TRABALHA
+Você conversa com um programa, não com uma pessoa. A cada turno responda com UM único objeto JSON, sem texto antes ou depois e sem cercas de código. O programa executa a ação e devolve a observação na mensagem seguinte. As únicas ações que existem:
+{"acao": "perfil_canais_proprios", "raciocinio": "<uma frase: por que esta ação>"}  -> mostra a política dos canais próprios e o ALVO que o Marketplace deve reproduzir (% de pedidos isentos, peso do frete na receita, margem recuperada). Use primeiro.
+{"acao": "simular_threshold", "threshold": <valor de 0 a 1500>, "raciocinio": "<uma frase: por que este valor>"}  -> mede o efeito desse threshold no Marketplace, o desvio em relação ao alvo e se ele tem evidência nos dados (zona_com_evidencia).
+{"acao": "concluir", "threshold_recomendado": <o threshold escolhido>, "memo": "<texto>"}  -> encerra com o memo executivo. O threshold_recomendado deve ser um dos que você simulou.
+Você NÃO tem outras ferramentas: não busque arquivos, não use a web, não execute código, não consulte skills nem conhecimento externo. Tudo de que precisa vem das observações.
+
+REGRAS
+- Comece por perfil_canais_proprios e leia a rampa de isenção dos canais próprios: identifique (a) o LIMITE INFERIOR, o menor valor de pedido em que a isenção passa de zero, e (b) o LIMITE SUPERIOR, o valor de pedido a partir do qual a isenção chega a 100%. Simule esses dois limites primeiro e depois refine entre eles em torno do que mais se aproximar do alvo.
+- Em toda ação de ferramenta preencha "raciocinio" com UMA frase objetiva dizendo por que você a escolheu, citando apenas números que você já viu nas observações. Nas duas primeiras simulações, diga onde na rampa você identificou o limite. Esse texto é registrado para auditoria.
+- No máximo 5 ações de ferramenta no total. Quando tiver dados suficientes, envie concluir.
+- Escolha o threshold com o menor desvio em relação ao alvo. Só recomende threshold com zona_com_evidencia = true.
+- Copie os números exatamente como as observações devolvem (já estão no formato brasileiro). Não invente, arredonde nem calcule números novos.
+- O memo tem de 5 a 7 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, o caminho percorrido em 1 ou 2 frases (quais limites da rampa você identificou, quais thresholds testou, na ordem, e por que o escolhido venceu), ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional.
+
+**Missão:** Recomende o threshold de frete grátis para o canal Marketplace.
+
+**Passo 1**: `perfil_canais_proprios({})` → {"menor_threshold_observado": "R$ 250", "canais_proprios": [{"canal": "Email Marketing", "pedidos": 2812, "pct_pedidos_com_frete": "21,1%", "frete_pct_receita": "1,00%"}, {"canal": "Google Ads", "pedidos": 5504, "pct_pedidos_com_frete": "20,6%", "frete_pct_receita": "1,01%"}, {"canal": "Influenciador", "pedidos": 2263, "pct_pedidos_com_frete": "11,8%", "frete_pct_receita": "0,42%"}, {"canal": "Instagram Ads", "pedidos": 4965, "pct_pedidos_com_frete": "21,4%", "frete_pct_receita": "1,04%"}, {"can…
+  ↳ raciocínio: Identificar o perfil alvo dos canais próprios e os limites da rampa de isenção para orientar as simulações no Marketplace.
+
+**Passo 2**: `simular_threshold({"threshold": 250})` → {"threshold": 250, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "81,1%", "margem_recuperada": "R$ 159.556,45", "frete_restante": "R$ 37.165,00", "frete_pct_receita": "0,93%", "desvio_vs_alvo": {"pct_pedidos_isentos": "+3,1 p.p.", "frete_pct_receita": "-0,15 p.p."}}
+  ↳ raciocínio: Simular o limite inferior de R$ 250 identificado na rampa onde a isenção passa de zero para 69,5%.
+
+**Passo 3**: `simular_threshold({"threshold": 450})` → {"threshold": 450, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "61,0%", "margem_recuperada": "R$ 120.030,53", "frete_restante": "R$ 76.690,92", "frete_pct_receita": "1,92%", "desvio_vs_alvo": {"pct_pedidos_isentos": "-17,0 p.p.", "frete_pct_receita": "+0,84 p.p."}}
+  ↳ raciocínio: Simular o limite superior de R$ 450 identificado na rampa onde a isenção atinge 100,0%.
+
+**Passo 4**: `simular_threshold({"threshold": 300})` → {"threshold": 300, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "74,9%", "margem_recuperada": "R$ 147.759,77", "frete_restante": "R$ 48.961,68", "frete_pct_receita": "1,23%", "desvio_vs_alvo": {"pct_pedidos_isentos": "-3,1 p.p.", "frete_pct_receita": "+0,15 p.p."}}
+  ↳ raciocínio: Refinar a busca entre os limites testados simulando o valor de R$ 300 para reduzir o desvio de +3,1 p.p. observado em R$ 250.
+
+**Passo 5**: `simular_threshold({"threshold": 275})` → {"threshold": 275, "zona_com_evidencia": true, "aviso": null, "pct_pedidos_isentos": "78,1%", "margem_recuperada": "R$ 153.886,48", "frete_restante": "R$ 42.834,97", "frete_pct_receita": "1,07%", "desvio_vs_alvo": {"pct_pedidos_isentos": "+0,1 p.p.", "frete_pct_receita": "-0,01 p.p."}}
+  ↳ raciocínio: Simular o valor intermediário de R$ 275 para buscar o ponto exato do alvo de 78,0% de pedidos isentos.
+
+**Caminho percorrido:**
+Passo 1 — leu o perfil dos canais próprios. Alvo do Marketplace: 78,0% de pedidos isentos, frete em 1,08% da receita.
+   Justificativa do agente: Identificar o perfil alvo dos canais próprios e os limites da rampa de isenção para orientar as simulações no Marketplace.
+Passo 2 — simulou R$ 250: 81,1% de pedidos isentos (+3,1 p.p. do alvo), frete em 0,93% da receita (-0,15 p.p.), margem recuperada R$ 159.556,45.
+   Justificativa do agente: Simular o limite inferior de R$ 250 identificado na rampa onde a isenção passa de zero para 69,5%.
+Passo 3 — simulou R$ 450: 61,0% de pedidos isentos (-17,0 p.p. do alvo), frete em 1,92% da receita (+0,84 p.p.), margem recuperada R$ 120.030,53.
+   Justificativa do agente: Simular o limite superior de R$ 450 identificado na rampa onde a isenção atinge 100,0%.
+Passo 4 — simulou R$ 300: 74,9% de pedidos isentos (-3,1 p.p. do alvo), frete em 1,23% da receita (+0,15 p.p.), margem recuperada R$ 147.759,77.
+   Justificativa do agente: Refinar a busca entre os limites testados simulando o valor de R$ 300 para reduzir o desvio de +3,1 p.p. observado em R$ 250.
+Passo 5 — simulou R$ 275: 78,1% de pedidos isentos (+0,1 p.p. do alvo), frete em 1,07% da receita (-0,01 p.p.), margem recuperada R$ 153.886,48.
+   Justificativa do agente: Simular o valor intermediário de R$ 275 para buscar o ponto exato do alvo de 78,0% de pedidos isentos.
+
+**Memo:**
+Recomenda-se a adoção do threshold de R$ 275 para o canal Marketplace, pois este valor apresentou o menor desvio em relação ao alvo, com 78,1% de pedidos isentos e peso do frete na receita de 1,07%. O processo de definição identificou o limite inferior de R$ 250 e o superior de R$ 450 na rampa de isenção, testando em seguida os valores de R$ 300 e R$ 275 para refinar a aderência ao perfil dos canais próprios. O cenário de R$ 250 foi descartado por apresentar um desvio de +3,1 p.p. na proporção de isentos, enquanto o threshold de R$ 275 atingiu quase a exatidão do alvo de 78,0%. A implementação desta política projeta uma margem recuperada de R$ 153.886,48. Esta recomendação baseia-se na premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Todos os thresholds testados possuem evidência nos dados observados.
+
+**Threshold recomendado:** R$ 275.0
+
+**Resultado:** ok (6 passos, 5 ações de ferramenta)

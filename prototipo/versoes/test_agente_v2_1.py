@@ -1,4 +1,4 @@
-"""Testes do agente.py (versão agente-v3). Sem rede: o LLM é um roteiro pronto (LLMFalso) e os dados
+"""Testes do agente.py (versão agente-v2.1). Sem rede: o LLM é um roteiro pronto (LLMFalso) e os dados
 são sintéticos, então a suíte roda em segundos e sem gastar tokens.
 
 O roteiro é a lista de respostas que o "modelo" dará, uma por chamada. No protocolo em texto cada
@@ -497,16 +497,9 @@ def test_tabela_e_resumo_do_lote():
 # ================================================================================================
 # VERSÃO: o que muda entre v2.1 e v3 é só o prompt
 # ================================================================================================
-def test_versao_e_prompt_da_v3():
-    assert agente.VERSAO_AGENTE == "agente-v3"
+def test_versao_e_prompt_da_v2_1():
+    assert agente.VERSAO_AGENTE == "agente-v2.1"
     p = agente.SYSTEM_AGENTE
     assert '"raciocinio"' in p and '"threshold_recomendado"' in p and "caminho percorrido" in p
-    assert "LIMITE INFERIOR" in p and "LIMITE SUPERIOR" in p and "chega a 100%" in p   # manda DEDUZIR os extremos
-
-
-@pytest.mark.parametrize("numero", ["250", "275", "300", "450"])
-def test_prompt_da_v3_nao_entrega_nenhum_numero_da_resposta(numero):
-    # Protege a validade do experimento: se um destes números entrar no prompt, a v3 deixa de ser
-    # "o modelo deduz os extremos lendo a rampa" e vira a v2.1.
-    assert numero not in agente.SYSTEM_AGENTE
+    assert "extremos da rampa (250 e 450)" in p          # a v2.1 SUGERE os extremos no prompt
 

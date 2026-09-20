@@ -26,19 +26,14 @@ for recusado, o modelo tem UMA chance de corrigir). Se qualquer proteção falha
 resultado vem do caminho determinístico: o threshold equivalente à política dos canais próprios,
 narrado por relatorio.gerar_relatorio (que tem o seu próprio texto reserva).
 
-Versão agente-v3 (esta). Herda da v2.1 tudo o que está listado abaixo; o que muda é SÓ o prompt:
-    a v3 não dita os extremos da rampa. Manda o modelo LER a rampa na observação do perfil, identificar
-    o limite inferior (onde a isenção passa de zero) e o superior (onde chega a 100%), testar esses dois
-    e refinar. Nenhum dos números da resposta aparece no prompt (test_agente.py confere isso).
-
-Herdado da v2.1, em relação à v2:
+Versão agente-v2.1 (esta) em relação à v2:
     - "raciocinio": cada ação de ferramenta traz uma frase com o porquê. Fica na trilha e no log.
       É a justificativa que o modelo DECLARA (não uma janela para o processamento interno dele).
     - "caminho percorrido": montado pelo CÓDIGO a partir da trilha (o que foi testado e o que voltou,
       fatos do motor) mais o raciocinio (a justificativa). O modelo não narra de memória.
     - "threshold_recomendado": campo estruturado na ação concluir, devolvido no resultado.
     - python agente.py --n 3: roda o agente várias vezes e imprime uma tabela de estabilidade.
-    A v2.1 SUGERE no prompt começar pelos extremos da rampa (250 e 450); a v3 tira essa dica.
+    O prompt desta versão SUGERE começar pelos extremos da rampa (250 e 450); a v3 tira essa dica.
 
 Uso:  from agente import rodar_agente ;  resultado = rodar_agente()
       ou, de dentro de src/:  python agente.py            (uma execução, com progresso)
@@ -61,7 +56,7 @@ from relatorio import brl, registrar_log, texto_da_mensagem
 from simulador import MENOR_THRESHOLD_OBSERVADO, simular, simular_politica_observada
 
 # Versão do prompt abaixo. Mudou o texto ou o protocolo? Incremente (vai em cada entrada do log).
-VERSAO_AGENTE = "agente-v3"
+VERSAO_AGENTE = "agente-v2.1"
 
 MAX_PASSOS = 8            # chamadas ao modelo por execução (sobra folga para 1 correção de rota)
 MAX_CHAMADAS_TOOL = 5     # ações de ferramenta por execução (perfil + até 4 simulações)
@@ -85,7 +80,7 @@ SYSTEM_AGENTE = f"""Você é um analista de precificação de frete da Vértice 
 
 CONTEXTO
 - Hoje 100% dos pedidos do Marketplace pagam frete (cerca de R$ 32 por remessa) e isso pesa na margem. Nos canais próprios a isenção de frete já existe.
-- A meta NÃO é maximizar a isenção. É fazer o Marketplace reproduzir o perfil dos canais próprios: a mesma proporção de pedidos isentos e o mesmo peso do frete na receita. Nenhum canal próprio isenta frete abaixo do menor valor observado (a observação do perfil informa qual é), então thresholds abaixo disso são extrapolação e não podem ser recomendados.
+- A meta NÃO é maximizar a isenção. É fazer o Marketplace reproduzir o perfil dos canais próprios: a mesma proporção de pedidos isentos e o mesmo peso do frete na receita. Nenhum canal próprio isenta frete abaixo de R$ {MENOR_THRESHOLD_OBSERVADO}, então thresholds abaixo disso são extrapolação e não podem ser recomendados.
 
 COMO VOCÊ TRABALHA
 Você conversa com um programa, não com uma pessoa. A cada turno responda com UM único objeto JSON, sem texto antes ou depois e sem cercas de código. O programa executa a ação e devolve a observação na mensagem seguinte. As únicas ações que existem:
@@ -95,12 +90,12 @@ Você conversa com um programa, não com uma pessoa. A cada turno responda com U
 Você NÃO tem outras ferramentas: não busque arquivos, não use a web, não execute código, não consulte skills nem conhecimento externo. Tudo de que precisa vem das observações.
 
 REGRAS
-- Comece por perfil_canais_proprios e leia a rampa de isenção dos canais próprios: identifique (a) o LIMITE INFERIOR, o menor valor de pedido em que a isenção passa de zero, e (b) o LIMITE SUPERIOR, o valor de pedido a partir do qual a isenção chega a 100%. Simule esses dois limites primeiro e depois refine entre eles em torno do que mais se aproximar do alvo.
-- Em toda ação de ferramenta preencha "raciocinio" com UMA frase objetiva dizendo por que você a escolheu, citando apenas números que você já viu nas observações. Nas duas primeiras simulações, diga onde na rampa você identificou o limite. Esse texto é registrado para auditoria.
+- Comece por perfil_canais_proprios. Depois teste thresholds com simular_threshold; sugestão: comece pelos extremos da rampa (250 e 450) e refine em torno do que mais se aproximar do alvo.
+- Em toda ação de ferramenta preencha "raciocinio" com UMA frase objetiva dizendo por que você a escolheu, citando apenas números que você já viu nas observações. Esse texto é registrado para auditoria.
 - No máximo {MAX_CHAMADAS_TOOL} ações de ferramenta no total. Quando tiver dados suficientes, envie concluir.
 - Escolha o threshold com o menor desvio em relação ao alvo. Só recomende threshold com zona_com_evidencia = true.
 - Copie os números exatamente como as observações devolvem (já estão no formato brasileiro). Não invente, arredonde nem calcule números novos.
-- O memo tem de 5 a 7 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, o caminho percorrido em 1 ou 2 frases (quais limites da rampa você identificou, quais thresholds testou, na ordem, e por que o escolhido venceu), ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional."""
+- O memo tem de 5 a 7 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, o caminho percorrido em 1 ou 2 frases (quais thresholds você testou, na ordem, e por que o escolhido venceu), ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional."""
 
 logger = logging.getLogger(__name__)
 

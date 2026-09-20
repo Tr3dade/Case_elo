@@ -29,8 +29,8 @@ Caminho em que o modelo decide o que testar. Os números vêm sempre do motor de
 |---|---|---|---|---|
 | agente-v1 | 20/09 | Function calling nativo (`bind_tools`) | Primeira versão, com duas ferramentas. Missão de reproduzir o perfil dos canais próprios (e não de maximizar a isenção). | **2 execuções reais:** o modelo pediu só ferramentas da própria Sandbox (`search_filesystem`, `web_search`, `view_skill`, `execute_code`...) e nunca as nossas. Fallback nas duas (US$ 0,0367 e US$ 0,0424). Diagnóstico: `tool_choice` devolve HTTP 400; a documentação de `POST /api/chat/completions` lista só `model`, `messages`, `stream`, `temperature` e `max_tokens`; toda chamada com `tools` foi "sequestrada" pelas ferramentas da plataforma, enquanto as chamadas sem `tools` (o relatório) responderam normalmente. |
 | agente-v2 | 20/09 | Texto (ReAct original): um objeto JSON por turno | Sem `tools`. O modelo responde com a ação (`perfil_canais_proprios`, `simular_threshold` ou `concluir`) e o código devolve a observação como mensagem do usuário. Proteções: limite de passos e de ações, orçamento de tempo, validação do memo, fallback. | **1ª execução real:** 6 passos (perfil, 250, 450, 300, 275, concluir), sem fallback, 35,3 s, US$ 0,0455; recomendou R$ 275 e os números conferem com o simulador. Quem decidiu o quê: o prompt **sugeria** começar pelos extremos 250 e 450; os valores 300 e 275, o momento de parar e a redação foram do modelo (300 e 275 não aparecem no prompt, e o `threshold_equivalente` nunca é enviado a ele). |
-| agente-v2.1 | 20/09 | Igual à v2 | Acrescenta `raciocinio` em cada ação, o "caminho percorrido" montado pelo código, o campo estruturado `threshold_recomendado` e o teste de estabilidade `--n`. O prompt continua sugerindo os extremos 250 e 450. | A preencher após a primeira execução real. |
-| agente-v3 | 20/09 | Igual à v2 | Igual à v2.1, com **uma única diferença: o prompt não dita os extremos**. Manda o modelo ler a rampa na observação do perfil, identificar o limite inferior (onde a isenção passa de zero) e o superior (onde chega a 100%), testar esses dois e refinar. Nenhum número da resposta (250, 275, 300, 450) aparece no prompt, e um teste automático garante isso. | A preencher após o experimento de estabilidade (seção 3). |
+| agente-v2.1 | 20/09 | Igual à v2 | Acrescenta `raciocinio` em cada ação, o "caminho percorrido" montado pelo código, o campo estruturado `threshold_recomendado` e o teste de estabilidade `--n`. O prompt continua sugerindo os extremos 250 e 450. | **1ª execução real:** 6 passos (perfil, 250, 450, 300, 275, concluir), sem fallback, 81,8 s (um único passo levou 49 s), US$ 0,0458. Recomendou R$ 275, com `raciocinio` preenchido em todas as ações e o caminho citado no memo; os números conferem com o simulador. A sequência foi a mesma da v2. |
+| agente-v3 | 20/09 | Igual à v2 | Igual à v2.1, com **uma única diferença: o prompt não dita os extremos**. Manda o modelo ler a rampa na observação do perfil, identificar o limite inferior (onde a isenção passa de zero) e o superior (onde chega a 100%), testar esses dois e refinar. Nenhum número da resposta (250, 275, 300, 450) aparece no prompt, e um teste automático garante isso. | **3 execuções reais:** sequência idêntica nas três (250 → 450 → 300 → 275), recomendado R$ 275 em 3 de 3, os dois extremos testados em 3 de 3, nenhum fallback; 95,7 s, 87,8 s e 36,4 s; US$ 0,0536, 0,0518 e 0,0440. O critério de adoção da seção 3 foi cumprido. Sem receber os números no prompt, o modelo testou 250 e 450 como primeiras simulações nas três execuções (a justificativa de cada passo está no `prompts_log.md`). |
 
 ### 2.2 O que cada versão faz de diferente
 
@@ -97,8 +97,12 @@ Resultados (preencher):
 
 | Versão | Execuções | Fallback | Extremos testados | Recomendações | Tempo médio | Custo médio | Decisão |
 |---|---|---|---|---|---|---|---|
-| agente-v2.1 | | | | | | | |
-| agente-v3 | 3 | | | | | | |
+| agente-v2.1 | 1 | 0 de 1 | 1 de 1 | 275 | 81,8 s | US$ 0,0458 | arquivada em `versoes/` |
+| agente-v3 | 3 | 0 de 3 | 3 de 3 | 275, 275, 275 | 73,3 s (36,4 a 95,7 s) | US$ 0,0498 (total US$ 0,1494) | **adotada** (critério cumprido) |
+
+**Decisão (20/09/2026):** a v3 é a versão em uso (`src/agente.py`). A v2.1 fica arquivada em `versoes/`, e como
+o código das duas é idêntico fora do prompt, voltar para ela é copiar dois arquivos. Ressalvas: são 3 execuções,
+o tempo variou bastante (de 36 a 96 s) e o orçamento de tempo do agente é de 120 s.
 
 ## 4. Limitações conhecidas
 
@@ -111,5 +115,17 @@ Resultados (preencher):
 - **Premissa do simulador.** Nos dados, pedido isento mostra frete zero, mas não mostra quem absorve o custo da
   remessa nem se a demanda reage. A margem recuperada é um potencial, condicionado ao Marketplace se
   comportar como os canais próprios.
-- **Custo e tempo.** A Sandbox soma cerca de 10 mil tokens de entrada em toda chamada. A execução real da v2
-  custou US$ 0,0455 e levou 35 s; a v2.1 e a v3 devem ficar próximas disso (o memo é um pouco maior).
+- **Custo e tempo.** A Sandbox soma cerca de 10 mil tokens de entrada em toda chamada. Execuções reais: v2, US$ 0,0455
+  e 35 s; v2.1, US$ 0,0458 e 82 s; v3, média de US$ 0,0498 e 73 s (de 36 a 96 s). O tempo varia com a carga da
+  Sandbox (um passo isolado levou 49 s), e o orçamento de tempo do agente é de 120 s: numa demonstração lenta, o
+  agente pode cair no fallback, que devolve o mesmo threshold pelo texto-modelo.
+
+## 5. Onde está cada versão no repositório
+
+- `prototipo/src/agente.py` e `prototipo/src/test_agente.py`: a **versão em uso** (hoje, a v3). É o par que o
+  `python -m pytest -q` testa e que o front importa.
+- `prototipo/versoes/`: **um arquivo de cada versão** (`agente_v2_1.py`, `agente_v3.py` e os testes de cada uma),
+  só para consulta. O `conftest.py` da pasta impede o pytest de coletá-los. Para trocar de versão, copie o par
+  desejado por cima de `src/agente.py` e `src/test_agente.py`.
+- Histórico do git: cada versão adotada tem o seu commit.
+- Rode o `pytest` sempre de dentro de `prototipo/src` (o `test_simulador.py` usa um caminho relativo aos dados).
