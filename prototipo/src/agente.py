@@ -129,6 +129,21 @@ def _json(obj) -> str:
     return json.dumps(obj, ensure_ascii=False)
 
 
+def _avisar(ao_passo, **evento) -> None:
+    """Entrega um evento de progresso ao callback do chamador (ex.: a tela mostrando cada passo).
+
+    O callback é código de fora: qualquer exceção dele é registrada e engolida, porque um erro de
+    exibição nunca pode derrubar o agente no meio da execução (que já gastou tokens). Sem callback,
+    não faz nada. O evento é sempre um dict com "tipo" e "passo" mais os campos de cada tipo.
+    """
+    if ao_passo is None:
+        return
+    try:
+        ao_passo(evento)
+    except Exception as erro:
+        logger.warning("ao_passo falhou no evento %r (%s): %s", evento.get("tipo"), type(erro).__name__, erro)
+
+
 # ----------------------------------------------------------------------------------------------
 # Ações (o que o modelo pode pedir)
 # ----------------------------------------------------------------------------------------------
@@ -353,8 +368,25 @@ def formatar_caminho(caminho: list) -> str:
 # ----------------------------------------------------------------------------------------------
 # O agente
 # ----------------------------------------------------------------------------------------------
-def rodar_agente(missao: str = MISSAO_PADRAO) -> dict:
-    """Roda o agente e devolve um dict:
+def rodar_agente(missao: str = MISSAO_PADRAO, ao_passo=None, dados=None) -> dict:
+    """Roda o agente e devolve um dict.
+
+    Parâmetros opcionais (sem eles, o comportamento é o de sempre):
+        ao_passo  função que recebe um dict {"tipo", "passo", ...} a cada evento, para o front mostrar o
+                  progresso enquanto o agente roda (a execução leva de 36 a 96 s). Tipos:
+                    inicio            run_id, missao, max_passos
+                    chamada_modelo    max_passos (vai chamar o modelo neste passo)
+                    acao              acao (nome), raciocinio, threshold (se houver), threshold_recomendado (no concluir)
+                    observacao        ferramenta, args, detalhe (o passo já estruturado, como em "caminho")
+                    resposta_invalida motivo
+                    memo_recusado     motivo
+                    fallback          motivo, threshold (o do caminho determinístico)
+                    fim               fallback, threshold_recomendado, segundos
+                  Exceção dentro do callback é registrada e ignorada: nunca derruba o agente.
+        dados     tupla (pedidos, rampa, perfil), como agente._carregar_dados() devolve. None = lê os CSVs
+                  de data/. Serve para o front passar dados que já tem em memória.
+
+    O dict devolvido tem:
         memo               texto executivo final
         fallback           True se o memo veio do caminho determinístico
         motivo_fallback    por que caiu no fallback (None se não caiu)
@@ -367,7 +399,7 @@ def rodar_agente(missao: str = MISSAO_PADRAO) -> dict:
     """
     run_id = uso_api.novo_run_id()
     t0 = time.perf_counter()
-    pedidos, rampa, perfil = _carregar_dados()
+    pedidos, rampa, perfil = dados if dados is not None else _carregar_dados()
     alvo = simular_politica_observada(pedidos, rampa)
 
     testados: dict = {}   # threshold -> resultado de simular(), preenchido pela ação simular_threshold
@@ -382,6 +414,7 @@ def rodar_agente(missao: str = MISSAO_PADRAO) -> dict:
     # <o threshold escolhido> como tags HTML e os esconde.
     registrar_log(f"\n---\n## Agente [{VERSAO_AGENTE}] (run {run_id}, {momento})\n"
                   f"**Prompt:**\n```text\n{SYSTEM_AGENTE}\n```\n\n**Missão:** {missao}\n")
+    _avisar(ao_passo, tipo="inicio", passo=0, run_id=run_id, missao=missao, max_passos=MAX_PASSOS)
 
     try:
         ferramentas = _criar_ferramentas(pedidos, rampa, perfil, alvo, testados)
@@ -398,6 +431,7 @@ def rodar_agente(missao: str = MISSAO_PADRAO) -> dict:
                 break
             passos = passo
             logger.info("passo %d/%d: chamando o modelo...", passo, MAX_PASSOS)
+            _avisar(ao_passo, tipo="chamada_modelo", passo=passo, max_passos=MAX_PASSOS)
             inicio = time.perf_counter()
             try:
                 resposta = llm.invoke(mensagens)
@@ -426,6 +460,7 @@ def rodar_agente(missao: str = MISSAO_PADRAO) -> dict:
             if acao is None:
                 invalidos += 1
                 registrar_log(f"\n**Passo {passo}**: resposta fora do protocolo ({erro_protocolo})\n")
+                _avisar(ao_passo, tipo="resposta_invalida", passo=passo, motivo=erro_protocolo)
                 if invalidos >= MAX_TURNOS_INVALIDOS:
                     motivo = f"o modelo não seguiu o protocolo JSON ({invalidos} respostas inválidas)"
                     break
@@ -438,12 +473,15 @@ def rodar_agente(missao: str = MISSAO_PADRAO) -> dict:
             if acao["acao"] == "concluir":
                 memo = str(acao.get("memo") or "")
                 declarado = acao.get("threshold_recomendado")
+                _avisar(ao_passo, tipo="acao", passo=passo, acao="concluir", threshold=None,
+                        threshold_recomendado=declarado, raciocinio="")
                 recusa = _validar_memo(memo, testados)
                 if recusa is None:
                     break
                 if revisoes < MAX_REVISOES and passo < MAX_PASSOS:
                     revisoes += 1
                     registrar_log(f"\n**Passo {passo}**: memo recusado ({recusa}); pedindo correção\n")
+                    _avisar(ao_passo, tipo="memo_recusado", passo=passo, motivo=recusa)
                     mensagens.append(HumanMessage(content=(
                         f"MEMO RECUSADO: {recusa}. Corrija e envie a ação concluir de novo, citando um threshold "
                         "que você simulou (com zona_com_evidencia = true) e a margem recuperada exatamente "
@@ -457,6 +495,8 @@ def rodar_agente(missao: str = MISSAO_PADRAO) -> dict:
             nome = acao["acao"]
             raciocinio = _limpar_raciocinio(acao.get("raciocinio"))
             args = {k: v for k, v in acao.items() if k not in ("acao", "raciocinio")}
+            _avisar(ao_passo, tipo="acao", passo=passo, acao=nome, threshold=args.get("threshold"),
+                    threshold_recomendado=None, raciocinio=raciocinio)
             if chamadas_tool >= MAX_CHAMADAS_TOOL:
                 observacao = (f"Limite de {MAX_CHAMADAS_TOOL} ações de ferramenta atingido. "
                               "Não peça mais ferramentas: envie agora a ação concluir com os cenários já testados.")
@@ -471,6 +511,8 @@ def rodar_agente(missao: str = MISSAO_PADRAO) -> dict:
                           f"{observacao[:500]}{'…' if len(observacao) > 500 else ''}\n"
                           + (f"  ↳ raciocínio: {raciocinio}\n" if raciocinio else ""))
             mensagens.append(HumanMessage(content=f"OBSERVAÇÃO ({nome}): {observacao}"))
+            _avisar(ao_passo, tipo="observacao", passo=passo, ferramenta=nome, args=args,
+                    detalhe=montar_caminho(trilha[-1:])[0])
 
         if memo is None and motivo is None:
             motivo = f"limite de {MAX_PASSOS} passos sem conclusão"
@@ -498,12 +540,15 @@ def rodar_agente(missao: str = MISSAO_PADRAO) -> dict:
         fonte = "texto-modelo (API indisponível ou lenta)" if api_indisponivel else "relatório simples"
         registrar_log(f"\n**Resultado: FALLBACK** ({motivo}). Usando o threshold equivalente à política "
                       f"observada, R$ {threshold_fallback}, pelo {fonte}.\n")
+        _avisar(ao_passo, tipo="fallback", passo=passos, motivo=motivo, threshold=threshold_fallback)
         memo = relatorio.texto_reserva(cenario) if api_indisponivel else relatorio.gerar_relatorio(cenario)
         recomendado = threshold_fallback
 
     if isinstance(recomendado, float) and recomendado.is_integer():
         recomendado = int(recomendado)
 
+    _avisar(ao_passo, tipo="fim", passo=passos, fallback=motivo is not None, threshold_recomendado=recomendado,
+            segundos=round(time.perf_counter() - t0, 1))
     return {
         "run_id": run_id, "versao_prompt": VERSAO_AGENTE,
         "memo": memo, "fallback": motivo is not None, "motivo_fallback": motivo,
