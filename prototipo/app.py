@@ -307,10 +307,16 @@ def render_painel_gestor():
     vendas_2023 = vendas[(vendas["data_pedido"] >= "2023-01-01") & (vendas["data_pedido"] < "2024-01-01")].copy()
     vendas_2023["mes"] = vendas_2023["data_pedido"].dt.to_period("M").astype(str)
 
-    receita_liquida = vendas_2023["receita_liquida"].sum()
-    margem_total = vendas_2023["margem_contribuicao"].sum()
-    taxa_devolucao = vendas_2023["devolvido"].mean() * 100
-    pedidos_total = vendas["order_id"].nunique()
+    vendas_nao_canceladas = vendas_2023[vendas_2023["status_pagamento"].ne("Cancelado")].copy()
+    vendas_validas = vendas_nao_canceladas[vendas_nao_canceladas["devolvido"].eq(False)].copy()
+    vendas_devolvidas = vendas_nao_canceladas[vendas_nao_canceladas["devolvido"].eq(True)].copy()
+    receita_liquida = vendas_validas["receita_liquida"].sum()
+    receita_bruta = vendas_validas["receita_bruta"].sum()
+    margem_total = vendas_validas["margem_contribuicao"].sum()
+    margem_perdida_devolucoes = vendas_devolvidas["margem_contribuicao"].sum()
+    taxa_devolucao = len(vendas_devolvidas) / len(vendas_nao_canceladas) * 100
+    pedidos_total = vendas_validas["order_id"].nunique()
+    vendas_atribuidas = vendas_nao_canceladas["order_id"].nunique()
     ticket_medio = receita_liquida / pedidos_total
 
     meses_ano = pd.period_range("2023-01", "2023-12", freq="M").astype(str)
@@ -394,11 +400,11 @@ def render_painel_gestor():
                 <div style="display:flex; align-items:center; gap: 1rem; color:#4b5563; font-size:0.85rem; flex-wrap:wrap;">
                     <span>Janeiro – Dezembro 2023</span>
                     <span>•</span>
-                    <span>{pedidos_total:,.0f} pedidos totais</span>
+                    <span>{pedidos_total:,.0f} pedidos · {vendas_atribuidas:,.0f} vendas atribuídas a canais</span>
                 </div>
             </div>
         </div>
-        """.format(pedidos_total=pedidos_total),
+        """.format(pedidos_total=pedidos_total, vendas_atribuidas=vendas_atribuidas),
         unsafe_allow_html=True,
     )
 
@@ -409,7 +415,7 @@ def render_painel_gestor():
             <div class="kpi-card">
                 <div class="kpi-label">Receita líquida</div>
                 <div class="kpi-value">{format_mi(receita_liquida).replace('R$ ', 'R$ ')}</div>
-                <div class="kpi-foot">Bruta R$ {receita_mensal['receita_bruta'].sum() / 1_000_000:.2f} mi · retenção 92,0%</div>
+                <div class="kpi-foot">Bruta {format_mi(receita_bruta)} · retenção {receita_liquida / receita_bruta * 100:.1f}%</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -431,7 +437,7 @@ def render_painel_gestor():
             <div class="kpi-card">
                 <div class="kpi-label">Taxa de devolução</div>
                 <div class="kpi-value warning">{taxa_devolucao:.2f}%</div>
-                <div class="kpi-foot">3.645 pedidos · R$ 1,35 mi de margem perdida</div>
+                <div class="kpi-foot">{len(vendas_devolvidas):,.0f} pedidos · {format_mi(margem_perdida_devolucoes)} de margem perdida</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -442,7 +448,7 @@ def render_painel_gestor():
             <div class="kpi-card">
                 <div class="kpi-label">Ticket médio</div>
                 <div class="kpi-value">R$ {ticket_medio:,.2f}</div>
-                <div class="kpi-foot">Custo de atendimento R$ {atendimento_total:,.0f}</div>
+                <div class="kpi-foot">Custo de atendimento {format_thousands_br(atendimento_total)}</div>
             </div>
             """,
             unsafe_allow_html=True,
