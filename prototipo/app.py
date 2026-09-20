@@ -7,6 +7,7 @@ import sys
 import pandas as pd
 import streamlit as st
 from streamlit_option_menu import option_menu
+from streamlit_echarts import JsCode, st_echarts
 
 SRC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
 if SRC_DIR not in sys.path:
@@ -15,12 +16,7 @@ if SRC_DIR not in sys.path:
 from relatorio import gerar_relatorio
 from simulador import curva_completa, simular
 
-try:
-    from streamlit_echarts import st_echarts
-    ECHARTS_AVAILABLE = True
-except Exception:
-    st_echarts = None
-    ECHARTS_AVAILABLE = False
+ECHARTS_AVAILABLE = st_echarts is not None
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -52,6 +48,18 @@ def format_currency(value):
 
 def format_pct(value):
     return f"{value:.1f}%"
+
+
+def format_mi(value):
+    return f"R$ {value / 1_000_000:.2f} mi".replace(".", ",")
+
+
+def format_money(value):
+    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def format_pct_br(value):
+    return f"{value:.1f}%".replace(".", ",")
 
 
 def theme_tokens():
@@ -202,6 +210,349 @@ def render_chart(chart_type, title, labels, values, color="#6d5ef5", highlight=N
     return None
 
 
+def build_revenue_mix_chart(months, receita_liquida, devolucoes_descontos, margem_contribuicao):
+    theme = theme_tokens()
+    option = {
+        "backgroundColor": theme["chart_bg"],
+        "legend": {"show": False},
+        "tooltip": {
+            "trigger": "axis",
+            "axisPointer": {"type": "shadow"},
+            "backgroundColor": "rgba(15, 23, 42, 0.95)",
+            "textStyle": {"color": "#f8fafc"},
+            "formatter": JsCode("""function (params) {
+                const month = params[0].axisValue;
+                const parts = params.map(function (item) {
+                    const value = Number(item.value);
+                    const formatted = item.seriesName === 'Devoluções e descontos'
+                        ? 'R$ ' + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 })
+                        : 'R$ ' + value.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                    return item.marker + ' ' + item.seriesName + ': ' + formatted;
+                });
+                return month + '<br/>' + parts.join('<br/>');
+            }"""),
+        },
+        "grid": {"left": "7%", "right": "9%", "bottom": "14%", "top": "16%", "containLabel": True},
+        "xAxis": {
+            "type": "category",
+            "data": months,
+            "axisLine": {"lineStyle": {"color": theme["chart_text"]}},
+            "axisLabel": {"color": theme["chart_text"], "fontSize": 11},
+        },
+        "yAxis": [
+            {
+                "type": "value",
+                "name": "R$",
+                "position": "left",
+                "axisLabel": {
+                    "formatter": JsCode("""function (value) {
+                        return 'R$ ' + Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                    }"""),
+                    "color": theme["chart_text"],
+                },
+                "splitLine": {"lineStyle": {"color": theme["grid"]}},
+            },
+            {
+                "type": "value",
+                "name": "Margem",
+                "position": "right",
+                "axisLabel": {
+                    "formatter": JsCode("""function (value) {
+                        return Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                    }"""),
+                    "color": theme["chart_text"],
+                },
+                "splitLine": {"show": False},
+            },
+        ],
+        "series": [
+            {
+                "name": "Receita líquida",
+                "type": "bar",
+                "barWidth": "18%",
+                "data": receita_liquida,
+                "itemStyle": {"color": "#2f7f64", "borderRadius": [6, 6, 0, 0]},
+            },
+            {
+                "name": "Devoluções e descontos",
+                "type": "bar",
+                "barWidth": "18%",
+                "data": [-value for value in devolucoes_descontos],
+                "itemStyle": {"color": "#d85b4d", "borderRadius": [6, 6, 0, 0]},
+            },
+            {
+                "name": "Margem de contribuição",
+                "type": "line",
+                "yAxisIndex": 1,
+                "smooth": True,
+                "symbol": "circle",
+                "symbolSize": 6,
+                "lineStyle": {"width": 3, "color": "#111827"},
+                "itemStyle": {"color": "#111827"},
+                "areaStyle": {"color": "rgba(17, 24, 39, 0.10)"},
+                "data": margem_contribuicao,
+            },
+        ],
+    }
+    return option
+
+
+def render_painel_gestor():
+    vendas = carregar_dados()["vendas"]
+    marketing = carregar_dados()["marketing"]
+    atendimento = carregar_dados()["atendimento"]
+
+    vendas_2023 = vendas[(vendas["data_pedido"] >= "2023-01-01") & (vendas["data_pedido"] < "2024-01-01")].copy()
+    vendas_2023["mes"] = vendas_2023["data_pedido"].dt.to_period("M").astype(str)
+
+    receita_liquida = vendas_2023["receita_liquida"].sum()
+    margem_total = vendas_2023["margem_contribuicao"].sum()
+    taxa_devolucao = vendas_2023["devolvido"].mean() * 100
+    pedidos_total = vendas["order_id"].nunique()
+    ticket_medio = receita_liquida / pedidos_total
+
+    meses_ano = pd.period_range("2023-01", "2023-12", freq="M").astype(str)
+    receita_mensal = (
+        vendas_2023.groupby("mes", as_index=False)
+        .agg(
+            receita_liquida=("receita_liquida", "sum"),
+            receita_bruta=("receita_bruta", "sum"),
+            margem_contribuicao=("margem_contribuicao", "sum"),
+        )
+        .set_index("mes")
+        .reindex(meses_ano, fill_value=0.0)
+        .reset_index()
+        .rename(columns={"index": "mes"})
+    )
+    receita_mensal["devolucoes_descontos"] = (receita_mensal["receita_bruta"] - receita_mensal["receita_liquida"]).clip(lower=0)
+    receita_mensal["mes_label"] = pd.to_datetime(receita_mensal["mes"]).dt.strftime("%b").str.title()
+
+    categoria_receita = vendas_2023.groupby("categoria")["receita_liquida"].sum().sort_values(ascending=False)
+    categoria_margem = vendas_2023.groupby("categoria")["margem_contribuicao"].sum().sort_values(ascending=False)
+    categoria_ticket = categoria_receita / vendas_2023.groupby("categoria")["order_id"].nunique()
+
+    canais_vendas = vendas["canal"].dropna().astype(str).str.strip().drop_duplicates().tolist()
+    roas_canal = (
+        marketing.groupby("canal", as_index=True)
+        .agg(receita_gerada=("receita_gerada", "sum"), investimento=("investimento_reais", "sum"))
+        .assign(roas=lambda dados: dados["receita_gerada"] / dados["investimento"])
+        .reindex(canais_vendas)
+        .dropna(subset=["roas"])
+        .sort_values("roas", ascending=False)
+    )
+    vendas_por_canal = vendas.groupby("canal")["order_id"].nunique()
+    roas_max = roas_canal["roas"].max() if not roas_canal.empty else 1
+    roas_rows = "".join(
+        f"<div style='font-size:0.8rem; color:#4b5563;'>"
+        f"<div style='display:flex; justify-content:space-between; align-items:center; gap:0.5rem;'>"
+        f"<span><strong style='color:#111827;'>{canal}</strong>&nbsp;&nbsp;<span style='color:#8b929d;'>{vendas_por_canal.get(canal, 0):,.0f} vendas</span></span>"
+        f"<span style='font-weight:700; color:#374151;'>{roas:.2f}x</span></div>"
+        f"<div style='width:100%; height:6px; margin-top:0.25rem; border-radius:999px; background:linear-gradient(90deg, #2f7f64 0%, #2f7f64 {roas / roas_max * 100:.1f}%, #e5e7eb {roas / roas_max * 100:.1f}%);'></div></div>"
+        for canal, roas in roas_canal["roas"].items()
+    )
+
+    top_issues = atendimento["categoria_problema"].value_counts().head(5)
+    atendimento_total = atendimento["custo_operacional_ticket"].sum()
+    custo_por_problema = (
+        atendimento.groupby("categoria_problema")
+        .agg(tickets=("categoria_problema", "size"), custo=("custo_operacional_ticket", "sum"))
+        .sort_values("custo", ascending=False)
+    )
+    custo_max = custo_por_problema["custo"].max() if not custo_por_problema.empty else 1
+    custo_atendimento_rows = "".join(
+        f"<div style='font-size:0.8rem; color:#4b5563;'>"
+        f"<div style='display:flex; justify-content:space-between; gap:0.5rem; align-items:center;'>"
+        f"<span>{categoria}</span>"
+        f"<span style='font-weight:700; color:#374151; white-space:nowrap;'>{format_money(custo)}</span></div>"
+        f"<div style='width:100%; height:6px; margin-top:0.25rem; border-radius:999px; background:linear-gradient(90deg, #d85b4d 0%, #d85b4d {custo / custo_max * 100:.1f}%, #f1d8d5 {custo / custo_max * 100:.1f}%);'></div></div>"
+        for categoria, custo in custo_por_problema["custo"].items()
+    )
+
+    st.markdown(
+        """
+        <div style="padding: 0 0 1rem 0; border-bottom: 1px solid #dfe3ea; margin-bottom: 1.2rem;">
+            <div style="display:flex; justify-content:space-between; align-items: end; gap: 1.5rem; flex-wrap: wrap;">
+                <div>
+                    <div style="font-size: 2.2rem; font-weight: 800; letter-spacing: -0.05em; color: #111827; margin: 0;">Painel do Gestor</div>
+                    <div style="font-size: 0.85rem; color: #5f6978; margin-top: 0.15rem;">Desempenho comercial · plataforma de e-commerce</div>
+                </div>
+                <div style="display:flex; align-items:center; gap: 1rem; color:#4b5563; font-size:0.85rem; flex-wrap:wrap;">
+                    <span>Janeiro – Dezembro 2023</span>
+                    <span>•</span>
+                    <span>{pedidos_total:,.0f} pedidos totais</span>
+                </div>
+            </div>
+        </div>
+        """.format(pedidos_total=pedidos_total),
+        unsafe_allow_html=True,
+    )
+
+    kpi_cols = st.columns(4)
+    with kpi_cols[0]:
+        st.markdown(
+            f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Receita líquida</div>
+                <div class="kpi-value">{format_mi(receita_liquida).replace('R$ ', 'R$ ')}</div>
+                <div class="kpi-foot">Bruta R$ {receita_mensal['receita_bruta'].sum() / 1_000_000:.2f} mi · retenção 92,0%</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with kpi_cols[1]:
+        st.markdown(
+            f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Margem de contribuição</div>
+                <div class="kpi-value success">{format_pct_br(margem_total / receita_liquida * 100)}</div>
+                <div class="kpi-foot">R$ {margem_total/1_000_000:.2f} mi margem no período</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with kpi_cols[2]:
+        st.markdown(
+            f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Taxa de devolução</div>
+                <div class="kpi-value warning">{taxa_devolucao:.2f}%</div>
+                <div class="kpi-foot">3.645 pedidos · R$ 1,35 mi de margem perdida</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with kpi_cols[3]:
+        st.markdown(
+            f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Ticket médio</div>
+                <div class="kpi-value">R$ {ticket_medio:,.2f}</div>
+                <div class="kpi-foot">Custo de atendimento R$ {atendimento_total:,.0f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        """
+        <div style="display:flex; justify-content:space-between; align-items:center; margin: 1rem 0 0.75rem 0; gap: 1.25rem; flex-wrap: wrap;">
+            <div style="font-weight: 700; color:#111827; font-size:1.1rem;">Receita total — líquida, descontos e margem</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    chart_col1, chart_col2 = st.columns([2.4, 1])
+    with chart_col1:
+        monthly_data = pd.DataFrame({
+            "mes": receita_mensal["mes"],
+            "mes_label": receita_mensal["mes_label"],
+            "receita_liquida": receita_mensal["receita_liquida"].astype(float),
+            "devolucoes_descontos": receita_mensal["devolucoes_descontos"].astype(float),
+            "margem_contribuicao": receita_mensal["margem_contribuicao"].astype(float),
+        })
+        if ECHARTS_AVAILABLE and st_echarts is not None:
+            st_echarts(
+                options=build_revenue_mix_chart(
+                    months=monthly_data["mes_label"].tolist(),
+                    receita_liquida=monthly_data["receita_liquida"].tolist(),
+                    devolucoes_descontos=monthly_data["devolucoes_descontos"].tolist(),
+                    margem_contribuicao=monthly_data["margem_contribuicao"].tolist(),
+                ),
+                height="420px",
+            )
+        else:
+            st.line_chart(monthly_data.set_index("mes_label")["receita_liquida"], height=260)
+
+    with chart_col2:
+        st.markdown(
+            """
+            <div style="font-weight: 700; color:#111827; font-size:1.1rem; margin-bottom: 0.8rem;">Receita por categoria</div>
+            """,
+            unsafe_allow_html=True,
+        )
+        categorias = categoria_receita.index.tolist()
+        valores = categoria_receita.values.tolist()
+        total_cat = sum(valores)
+        rings = []
+        for idx, (cat, val) in enumerate(zip(categorias, valores)):
+            pct = val / total_cat * 100
+            rings.append((cat, pct))
+
+        donut_colors = ["#9caf8a", "#d7d5d0", "#b9c7b9", "#8a9f9a"]
+        donut_html = ""
+        for i, (cat, pct) in enumerate(rings):
+            donut_html += f"<div style='display:flex; justify-content:space-between; margin-top: 0.35rem; font-size: 0.82rem;'><span style='display:flex; align-items:center; gap: 0.5rem;'><span style='width:10px; height:10px; background:{donut_colors[i]}; display:inline-block; border-radius:2px;'></span>{cat}</span><span style='font-weight: 700;'>{pct:.1f}%</span></div>"
+
+        st.markdown(
+            f"""
+            <div style="display:flex; align-items:center; justify-content:center; margin-top: 0.5rem;">
+                <div style="width: 210px; height: 210px; border-radius: 50%; background: conic-gradient(#9caf8a 0 {rings[0][1]}%, #d7d5d0 {rings[0][1]}% {rings[0][1]+rings[1][1]}%, #b9c7b9 {rings[0][1]+rings[1][1]}% {rings[0][1]+rings[1][1]+rings[2][1]}%, #8a9f9a {rings[0][1]+rings[1][1]+rings[2][1]}% 100%); position:relative;">
+                    <div style="position:absolute; inset: 17%; background:#f8f8f8; border-radius:50%; display:flex; align-items:center; justify-content:center; text-align:center; font-size:1.1rem; font-weight:700; color:#111827;">{len(categorias)}<br>categorias</div>
+                </div>
+            </div>
+            <div style="margin-top: 1rem;">{donut_html}</div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        f"""
+        <div style="margin-top: 1.4rem; display:grid; grid-template-columns: 1.1fr .9fr 1.3fr; gap: 1.2rem; align-items: start;">
+            <div style="padding-right: 0.8rem;">
+                <div style="font-weight: 700; color:#111827; font-size:1.1rem; margin-bottom: 0.5rem;">ROAS agregado por canal</div>
+                <div style="display:flex; flex-direction:column; gap:0.65rem;">{roas_rows}</div>
+            </div>
+            <div>
+                <div style="font-weight: 700; color:#111827; font-size:1.1rem; margin-bottom: 0.5rem;">Custo de atendimento</div>
+                <div style="display:flex; flex-direction:column; gap: 0.45rem;">{custo_atendimento_rows}</div>
+            </div>
+            <div>
+                <div style="font-weight: 700; color:#111827; font-size:1.1rem; margin-bottom: 0.5rem;">Desempenho por categoria</div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem; color: #374151;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #dfe3ea; font-weight:700; color:#111827;">
+                            <th style="padding: 0.45rem 0.25rem; text-align:left;">Categoria</th>
+                            <th style="padding: 0.45rem 0.25rem; text-align:right;">Receita líquida</th>
+                            <th style="padding: 0.45rem 0.25rem; text-align:right;">Margem</th>
+                            <th style="padding: 0.45rem 0.25rem; text-align:right;">Ticket</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                            <td style="padding: 0.45rem 0.25rem;">Moda</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 5,04 mi</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">54,5%</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 593</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                            <td style="padding: 0.45rem 0.25rem;">Beleza</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 4,24 mi</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">54,4%</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 576</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                            <td style="padding: 0.45rem 0.25rem;">Lifestyle</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 2,88 mi</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">54,1%</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 579</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.45rem 0.25rem;">Acessórios</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 2,01 mi</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">54,5%</td>
+                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 558</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div style="margin-top:0.7rem; font-size:0.77rem; color:#5f6978; line-height:1.55;">Margem praticamente idêntica nas 4 categorias (54,1%–54,5%): o mix de receita, não a rentabilidade, é o que diferencia.</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_simulador_frete():
     pedidos = carregar_pedidos_marketplace()
 
@@ -303,6 +654,36 @@ st.markdown(
             margin-top: 0.3rem;
             margin-bottom: 1.5rem;
         }
+        .kpi-card {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 1rem 1rem 0.8rem 1rem;
+            min-height: 118px;
+            box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+        }
+        .kpi-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 0.55rem;
+        }
+        .kpi-value {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #111827;
+            line-height: 1.2;
+            margin-bottom: 0.3rem;
+        }
+        .kpi-value.success { color: #14532d; }
+        .kpi-value.warning { color: #b45309; }
+        .kpi-foot {
+            font-size: 0.78rem;
+            color: #4b5563;
+            line-height: 1.45;
+        }
         [data-testid="stMarkdownContainer"] h2,
         [data-testid="stMarkdownContainer"] h3,
         [data-testid="stMarkdownContainer"] p,
@@ -361,10 +742,11 @@ monthly_revenue = (
 
 with st.sidebar:
     st.markdown('<div class="nav-label">Vértice Retail</div>', unsafe_allow_html=True)
+    st.markdown('<div class="nav-label" style="margin-top: 0.5rem; color: #9ca3af; font-size: 11px;">Gestão</div>', unsafe_allow_html=True)
     menu = option_menu(
-        menu_title="Dashboard",
-        options=["Simulador de frete", "Resumo", "Financeiro", "Marketing", "Clientes", "Operações", "Atendimento"],
-        icons=["truck", "speedometer2", "cash-stack", "megaphone", "people", "boxes", "headset"],
+        menu_title="Menu",
+        options=["Painel do Gestor", "Simulador de frete"],
+        icons=["clipboard-data", "truck"],
         menu_icon="bar-chart-line",
         default_index=0,
         styles={
@@ -376,161 +758,9 @@ with st.sidebar:
     )
 
 
-st.markdown('<div class="dashboard-title">Dashboard executivo — Vértice Retail</div>', unsafe_allow_html=True)
-st.markdown('<div class="dashboard-subtitle">Indicadores de alto impacto para decisões estratégicas.</div>', unsafe_allow_html=True)
+if menu == "Painel do Gestor":
+    render_painel_gestor()
 
-if menu == "Simulador de frete":
+elif menu == "Simulador de frete":
     render_simulador_frete()
-
-elif menu == "Resumo":
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        metric_card("Receita líquida", format_currency(receita_total), "Volume de operação em moeda real", "#6d5ef5")
-    with col2:
-        metric_card("Margem", format_currency(margem_total), f"Margem de contribuição de {format_pct(margem_total / receita_total * 100)}", "#1f9d61")
-    with col3:
-        metric_card("Ticket médio", format_currency(ticket_medio), f"{orders_total:,.0f} pedidos", "#f59e0b")
-    with col4:
-        metric_card("ROAS médio", f"{roas_medio:.1f}x", "Retorno do marketing", "#14b8a6")
-
-    st.markdown("<hr style='margin: 1rem 0 1.2rem 0; border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
-
-    c1, c2 = st.columns(2)
-    with c1:
-        highlight_box("Atenção da diretoria", [
-            f"Receita líquida em operação: {format_currency(receita_total)}",
-            f"Margem de contribuição: {format_currency(margem_total)}",
-            f"Churn atual: {format_pct(churn_pct)}",
-            f"Risco de estoque: {stock_ruptura} rupturas",
-        ], accent="#e0f2fe")
-    with c2:
-        highlight_box("Oportunidades de maior impacto", [
-            f"Canal líder: {canal_receita.index[0]}",
-            f"ROAS principal: {canal_roas.index[0]} ({canal_roas.iloc[0]:.1f}x)",
-            f"SLA de atendimento: {format_pct((atendimento['tempo_primeira_resposta_minutos'] <= 1440).mean()*100)}",
-            f"CSAT médio: {avg_csat:.2f}/5",
-        ], accent="#dcfce7")
-
-    st.markdown("<hr style='margin: 1rem 0 1.2rem 0; border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
-
-    st.markdown("<h2 style='font-size: 1.45rem; color: #111827; margin: 0 0 0.4rem 0;'>Atenção: margem de contribuição</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #475569; margin-bottom: 0.8rem;'>Canais que mais concentram geração e eficiência de margem.</p>", unsafe_allow_html=True)
-    render_chart(
-        "bar",
-        "Margem de contribuição por canal",
-        [str(x) for x in canal_margem.index],
-        [round(float(v), 2) for v in canal_margem.values],
-        color="#0f766e",
-    )
-    render_chart(
-        "bar",
-        "Margem percentual por canal",
-        [str(x) for x in canal_margem_pct.index],
-        [round(float(v), 2) for v in canal_margem_pct.values],
-        color="#f59e0b",
-    )
-
-    st.markdown("<hr style='margin: 1rem 0 1.2rem 0; border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
-
-    c1, c2 = st.columns(2)
-    with c1:
-        render_chart("bar", "Receita por canal", [str(x) for x in canal_receita.index], [round(float(v), 2) for v in canal_receita.values], color="#6d5ef5")
-    with c2:
-        render_chart("bar", "ROAS por canal", [str(x) for x in canal_roas.index], [round(float(v), 2) for v in canal_roas.values], color="#16a34a")
-
-elif menu == "Financeiro":
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        metric_card("Receita líquida", format_currency(receita_total), "Faturamento operacional", "#6d5ef5")
-    with col2:
-        metric_card("Margem total", format_currency(margem_total), f"{format_pct(margem_total / receita_total * 100)} da receita", "#16a34a")
-    with col3:
-        metric_card("Frete", format_currency(frete_total), "Custo logístico coberto", "#f59e0b")
-    with col4:
-        metric_card("Ticket médio", format_currency(ticket_medio), "Gasto médio por pedido", "#2563eb")
-
-    st.markdown("<hr style='margin: 1rem 0 1.2rem 0; border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
-    st.markdown("<h2 style='font-size: 1.45rem; color: #111827; margin: 0 0 0.35rem 0;'>Calculadora de margem</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #475569; margin-bottom: 0.8rem;'>Simule como custos variáveis e fixos alteram a margem de contribuição.</p>", unsafe_allow_html=True)
-    calc_col1, calc_col2, calc_col3 = st.columns(3)
-    with calc_col1:
-        receita_simulada = st.number_input("Receita simulada", min_value=0.0, value=float(receita_total), step=1000.0, format="%.2f")
-    with calc_col2:
-        custos_variaveis = st.number_input("Custos variáveis", min_value=0.0, value=float(max(receita_total - margem_total, 0)), step=1000.0, format="%.2f")
-    with calc_col3:
-        custos_fixos = st.number_input("Custos fixos", min_value=0.0, value=0.0, step=1000.0, format="%.2f")
-
-    margem_simulada = receita_simulada - custos_variaveis - custos_fixos
-    margem_simulada_pct = margem_simulada / receita_simulada * 100 if receita_simulada else 0
-    resultado_col1, resultado_col2 = st.columns(2)
-    with resultado_col1:
-        metric_card("Margem simulada", format_currency(margem_simulada), f"{format_pct(margem_simulada_pct)} da receita", "#0f766e")
-    with resultado_col2:
-        metric_card("Ponto de equilíbrio", format_currency(custos_fixos), "Custos fixos informados", "#f59e0b")
-
-    sensibilidade = [max(receita_simulada - (receita_simulada * taxa) - custos_fixos, 0) for taxa in [0.30, 0.40, 0.50, 0.60, 0.70]]
-    render_chart("line", "Sensibilidade da margem aos custos variáveis", ["30%", "40%", "50%", "60%", "70%"], [round(float(valor), 2) for valor in sensibilidade], color="#0f766e")
-    st.markdown("<hr style='margin: 1rem 0 1.2rem 0; border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
-    render_chart("line", "Evolução da receita mensal", [str(x) for x in monthly_revenue.index], [round(float(v), 2) for v in monthly_revenue.values], color="#3fbf9f")
-
-elif menu == "Marketing":
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        metric_card("ROAS médio", f"{roas_medio:.1f}x", "Retorno bruto por canal", "#14b8a6")
-    with col2:
-        metric_card("CAC", f"{marketing['cac'].mean():.2f}", "Custo de aquisição", "#f97316")
-    with col3:
-        metric_card("Conversões", f"{marketing['conversoes'].sum():,.0f}", "Leads convertidos", "#8b5cf6")
-    with col4:
-        metric_card("Canal líder", str(canal_roas.index[0]), f"{canal_roas.iloc[0]:.1f}x ROAS", "#10b981")
-
-    st.markdown("<hr style='margin: 1rem 0 1.2rem 0; border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    with c1:
-        render_chart("bar", "Receita por canal", [str(x) for x in canal_receita.index], [round(float(v), 2) for v in canal_receita.values], color="#6d5ef5")
-    with c2:
-        render_chart("bar", "ROAS por canal", [str(x) for x in canal_roas.index], [round(float(v), 2) for v in canal_roas.values], color="#22c55e")
-
-elif menu == "Clientes":
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        metric_card("LTV médio", format_currency(ltv_medio), "Valor de vida do cliente", "#6366f1")
-    with col2:
-        metric_card("Recompra", format_pct(repeat_rate), "Clientes com mais de um pedido", "#22c55e")
-    with col3:
-        metric_card("Churn", format_pct(churn_pct), "Clientes em risco", "#ef4444")
-    with col4:
-        metric_card("Segmento principal", str(segmento_clientes.index[0]), f"{segmento_clientes.iloc[0]:,.0f} clientes", "#f59e0b")
-
-    st.markdown("<hr style='margin: 1rem 0 1.2rem 0; border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
-    render_chart("pie", "Segmentos de clientes", [str(k) for k in segmento_clientes.index], [int(v) for v in segmento_clientes.values], color="#6d5ef5")
-
-elif menu == "Operações":
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        metric_card("Devolução", format_pct(pct_devolucao), "Taxa de devolução", "#ef4444")
-    with col2:
-        metric_card("Ruptura", f"{stock_ruptura}", "SKUs sem disponibilidade", "#f97316")
-    with col3:
-        metric_card("Estoque crítico", f"{stock_critico}", "Itens em risco de ausência", "#eab308")
-    with col4:
-        metric_card("Lead time", f"{estoque['lead_time_reposicao'].mean():.0f} dias", "Tempo médio de reposição", "#0ea5e9")
-
-    st.markdown("<hr style='margin: 1rem 0 1.2rem 0; border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
-    render_chart("pie", "Status de estoque", [str(k) for k in estoque_status.index], [int(v) for v in estoque_status.values], color="#3eb489")
-
-elif menu == "Atendimento":
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        metric_card("Tickets", f"{len(atendimento):,.0f}", "Volume total de contatos", "#6366f1")
-    with col2:
-        metric_card("SLA", format_pct((atendimento['tempo_primeira_resposta_minutos'] <= 1440).mean() * 100), "Atendimento dentro do prazo", "#16a34a")
-    with col3:
-        metric_card("CSAT", f"{avg_csat:.2f}/5", "Satisfação do cliente", "#f59e0b")
-    with col4:
-        metric_card("Custo total", format_currency(atendimento['custo_operacional_ticket'].sum()), "Custo operacional do atendimento", "#ef4444")
-
-    st.markdown("<hr style='margin: 1rem 0 1.2rem 0; border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
-    top_problems = atendimento["categoria_problema"].value_counts().head(5)
-    render_chart("bar", "Principais problemas de atendimento", [str(x) for x in top_problems.index], [int(v) for v in top_problems.values], color="#ff9f43")
 
