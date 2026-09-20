@@ -1,7 +1,12 @@
 """Testes do prep_dados.py com um vendas.csv minúsculo escrito na hora (não depende dos dados reais)."""
+import os
+
 import pandas as pd
+import pytest
 
 import prep_dados
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 
 
 def escrever_vendas(tmp_path):
@@ -38,3 +43,50 @@ def test_perfil_tem_uma_linha_por_canal_proprio(tmp_path):
     assert set(perfil.index) == {"Google Ads", "TikTok Ads"}
     assert perfil.loc["Google Ads", "pct_pedidos_com_frete"] == 50.0
     assert perfil.loc["Google Ads", "frete_pct_receita_liquida"] == round(30 / 360 * 100, 2)
+
+
+# ================================================================================================
+# Versões em memória (usadas pelo front): têm de dar o mesmo resultado das funções que gravam CSV
+# ================================================================================================
+def test_funcoes_em_memoria_dao_o_mesmo_das_funcoes_de_csv(tmp_path):
+    caminho = escrever_vendas(tmp_path)
+    vendas = pd.read_csv(caminho)
+    pd.testing.assert_frame_equal(prep_dados.pedidos_marketplace(vendas),
+                                  prep_dados.preparar(caminho, str(tmp_path / "mkt.csv")))
+    pd.testing.assert_frame_equal(prep_dados.rampa_canais_proprios(vendas),
+                                  prep_dados.preparar_rampa(caminho, str(tmp_path / "rampa.csv")))
+    pd.testing.assert_frame_equal(prep_dados.perfil_canais_proprios(vendas),
+                                  prep_dados.preparar_perfil(caminho, str(tmp_path / "perfil.csv")))
+
+
+def test_preparar_tudo_devolve_pedidos_rampa_e_perfil_lidos_dos_csvs(tmp_path):
+    caminho = escrever_vendas(tmp_path)
+    pedidos, rampa, perfil = prep_dados.preparar_tudo(pd.read_csv(caminho))
+    prep_dados.preparar(caminho, str(tmp_path / "mkt.csv"))
+    prep_dados.preparar_rampa(caminho, str(tmp_path / "rampa.csv"))
+    prep_dados.preparar_perfil(caminho, str(tmp_path / "perfil.csv"))
+    pd.testing.assert_frame_equal(pedidos, pd.read_csv(tmp_path / "mkt.csv"))
+    pd.testing.assert_frame_equal(rampa, pd.read_csv(tmp_path / "rampa.csv"))
+    pd.testing.assert_frame_equal(perfil, pd.read_csv(tmp_path / "perfil.csv"))
+
+
+def test_em_memoria_nao_altera_o_dataframe_de_entrada(tmp_path):
+    vendas = pd.read_csv(escrever_vendas(tmp_path))
+    antes = vendas.copy()
+    prep_dados.preparar_tudo(vendas)
+    pd.testing.assert_frame_equal(vendas, antes)
+
+
+def test_em_memoria_sobre_o_vendas_real_e_igual_aos_csvs_commitados():
+    """A rede de proteção da integração: o front monta os dados do simulador a partir do vendas.csv que o
+    painel já carregou. Se alguém mudar a limpeza dos dados (ou o vendas.csv) e os CSVs derivados ficarem
+    para trás, este teste acusa. O painel lê o arquivo com parse_dates: isso não pode mudar o resultado."""
+    caminhos = {n: os.path.join(DATA_DIR, n) for n in
+                ("vendas.csv", "marketplace_pedidos.csv", "rampa_canais_proprios.csv", "perfil_canais_proprios.csv")}
+    if not all(os.path.exists(c) for c in caminhos.values()):
+        pytest.skip("dados reais não encontrados em data/")
+    vendas = pd.read_csv(caminhos["vendas.csv"], parse_dates=["data_pedido"])   # como o carregar_dados() do app
+    pedidos, rampa, perfil = prep_dados.preparar_tudo(vendas)
+    pd.testing.assert_frame_equal(pedidos, pd.read_csv(caminhos["marketplace_pedidos.csv"]))
+    pd.testing.assert_frame_equal(rampa, pd.read_csv(caminhos["rampa_canais_proprios.csv"]))
+    pd.testing.assert_frame_equal(perfil, pd.read_csv(caminhos["perfil_canais_proprios.csv"]))
