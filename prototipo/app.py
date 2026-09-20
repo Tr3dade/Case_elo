@@ -67,8 +67,8 @@ def format_thousands_br(value):
     return f"R$ {value / 1_000:.1f} mil".replace(".", ",")
 
 
-def format_pct_br(value):
-    return f"{value:.1f}%".replace(".", ",")
+def format_pct_br(value, casas=1):
+    return f"{value:.{casas}f}%".replace(".", ",")
 
 
 def theme_tokens():
@@ -362,7 +362,6 @@ def render_painel_gestor():
         for canal, roas in roas_canal["roas"].items()
     )
 
-    top_issues = atendimento["categoria_problema"].value_counts().head(5)
     atendimento_2023 = atendimento[
         (atendimento["data_abertura"] >= "2023-01-01") & (atendimento["data_abertura"] < "2024-01-01")
     ].copy()
@@ -408,7 +407,7 @@ def render_painel_gestor():
             <div class="kpi-card">
                 <div class="kpi-label">Receita líquida</div>
                 <div class="kpi-value">{format_mi(receita_liquida).replace('R$ ', 'R$ ')}</div>
-                <div class="kpi-foot">Bruta {format_mi(receita_bruta)} · retenção {receita_liquida / receita_bruta * 100:.1f}%</div>
+                <div class="kpi-foot">Bruta {format_mi(receita_bruta)} · retenção {format_pct_br(receita_liquida / receita_bruta * 100)}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -419,7 +418,7 @@ def render_painel_gestor():
             <div class="kpi-card">
                 <div class="kpi-label">Margem de contribuição</div>
                 <div class="kpi-value success">{format_pct_br(margem_total / receita_liquida * 100)}</div>
-                <div class="kpi-foot">R$ {margem_total/1_000_000:.2f} mi margem no período</div>
+                <div class="kpi-foot">{format_mi(margem_total)} margem no período</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -429,7 +428,7 @@ def render_painel_gestor():
             f"""
             <div class="kpi-card">
                 <div class="kpi-label">Taxa de devolução</div>
-                <div class="kpi-value warning">{taxa_devolucao:.2f}%</div>
+                <div class="kpi-value warning">{format_pct_br(taxa_devolucao, 2)}</div>
                 <div class="kpi-foot">{len(vendas_devolvidas):,.0f} pedidos · {format_mi(margem_perdida_devolucoes)} de margem perdida</div>
             </div>
             """,
@@ -440,7 +439,7 @@ def render_painel_gestor():
             f"""
             <div class="kpi-card">
                 <div class="kpi-label">Ticket médio</div>
-                <div class="kpi-value">R$ {ticket_medio:,.2f}</div>
+                <div class="kpi-value">{format_money(ticket_medio)}</div>
                 <div class="kpi-foot">Custo de atendimento {format_thousands_br(atendimento_total)}</div>
             </div>
             """,
@@ -493,7 +492,7 @@ def render_painel_gestor():
             cor = donut_colors[i % len(donut_colors)]
             fatias.append(f"{cor} {acumulado}% {acumulado + pct}%")
             acumulado += pct
-            donut_html += f"<div style='display:flex; justify-content:space-between; margin-top: 0.35rem; font-size: 0.82rem;'><span style='display:flex; align-items:center; gap: 0.5rem;'><span style='width:10px; height:10px; background:{cor}; display:inline-block; border-radius:2px;'></span>{cat}</span><span style='font-weight: 700;'>{pct:.1f}%</span></div>"
+            donut_html += f"<div style='display:flex; justify-content:space-between; margin-top: 0.35rem; font-size: 0.82rem;'><span style='display:flex; align-items:center; gap: 0.5rem;'><span style='width:10px; height:10px; background:{cor}; display:inline-block; border-radius:2px;'></span>{cat}</span><span style='font-weight: 700;'>{format_pct_br(pct)}</span></div>"
 
         st.markdown(
             f"""

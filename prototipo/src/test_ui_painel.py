@@ -25,10 +25,10 @@ CARD_ANTES = [("Influenciador", "1,986", "7.48"), ("TikTok Ads", "2,583", "4.65"
               ("Orgânico", "2,873", "3.19"), ("Email Marketing", "2,484", "3.15"),
               ("Marketplace", "5,300", "2.92")]
 KPI_RECEITA_LIQUIDA, KPI_MARGEM = 14_170_454.54, 7_708_394.41
-KPIS_ANTES = [("Receita líquida", "R$ 14,17 mi", "Bruta R$ 15,40 mi · retenção 92.0%"),
-              ("Margem de contribuição", "54,4%", "R$ 7.71 mi margem no período"),
-              ("Taxa de devolução", "14.92%", "3,645 pedidos · R$ 1,35 mi de margem perdida"),
-              ("Ticket médio", "R$ 681.53", "Custo de atendimento R$ 179,4 mil")]
+KPIS_ANTES = [("Receita líquida", "R$ 14,17 mi", "Bruta R$ 15,40 mi · retenção 92,0%"),
+              ("Margem de contribuição", "54,4%", "R$ 7,71 mi margem no período"),
+              ("Taxa de devolução", "14,92%", "3,645 pedidos · R$ 1,35 mi de margem perdida"),
+              ("Ticket médio", "R$ 681,53", "Custo de atendimento R$ 179,4 mil")]
 
 
 @pytest.fixture(scope="module")
@@ -185,5 +185,5 @@ def test_donut_e_tabela_usam_a_mesma_base(painel):
     fatias = painel_calculos.por_categoria(vendas)["participacao_pct"]
     tela = texto_da_tela(painel)
     for categoria, pct in fatias.items():
-        assert f"{categoria}</span><span style='font-weight: 700;'>{pct:.1f}%" in tela, categoria
+        assert f"{categoria}</span><span style='font-weight: 700;'>{pct:.1f}%".replace(".", ",") in tela, categoria
     assert fatias.round(1).to_dict() == {"Moda": 35.6, "Beleza": 29.9, "Lifestyle": 20.3, "Acessórios": 14.2}
