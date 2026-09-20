@@ -56,6 +56,8 @@ def format_mi(value):
 
 def format_money(value):
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+def format_thousands_br(value):
+    return f"R$ {value / 1_000:.1f} mil".replace(".", ",")
 
 
 def format_pct_br(value):
@@ -331,21 +333,22 @@ def render_painel_gestor():
     categoria_margem = vendas_2023.groupby("categoria")["margem_contribuicao"].sum().sort_values(ascending=False)
     categoria_ticket = categoria_receita / vendas_2023.groupby("categoria")["order_id"].nunique()
 
-    vendas_roas = vendas[
-        vendas["status_pagamento"].eq("Aprovado") & ~vendas["devolvido"].fillna(False).astype(bool)
+    vendas_roas = vendas_2023[vendas_2023["status_pagamento"].ne("Cancelado")].copy()
+    marketing_2023 = marketing[
+        pd.to_datetime(marketing["data_inicio"], errors="coerce").dt.year.eq(2023)
     ].copy()
-    canais_vendas = vendas["canal"].dropna().astype(str).str.strip().drop_duplicates().tolist()
-    receita_aprovada_por_canal = vendas_roas.groupby("canal").agg(
+    canais_vendas = vendas_2023["canal"].dropna().astype(str).str.strip().drop_duplicates().tolist()
+    receita_valida_por_canal = vendas_roas.groupby("canal").agg(
         receita_liquida=("receita_liquida", "sum"),
         vendas_validas=("order_id", "nunique"),
     )
     roas_canal = (
-        marketing.groupby("canal", as_index=True)
-        .agg(investimento=("investimento_reais", "sum"))
-        .join(receita_aprovada_por_canal)
+        marketing_2023.groupby("canal", as_index=True)
+        .agg(receita_gerada=("receita_gerada", "sum"), investimento=("investimento_reais", "sum"))
+        .join(receita_valida_por_canal)
         .reindex(canais_vendas)
         .fillna({"receita_liquida": 0.0, "vendas_validas": 0.0})
-        .assign(roas=lambda dados: dados["receita_liquida"] / dados["investimento"])
+        .assign(roas=lambda dados: dados["receita_gerada"] / dados["investimento"])
         .dropna(subset=["roas"])
         .sort_values("roas", ascending=False)
     )
@@ -354,16 +357,19 @@ def render_painel_gestor():
     roas_rows = "".join(
         f"<div style='font-size:0.8rem; color:#4b5563;'>"
         f"<div style='display:flex; justify-content:space-between; align-items:center; gap:0.5rem;'>"
-        f"<span><strong style='color:#111827;'>{canal}</strong>&nbsp;&nbsp;<span style='color:#8b929d;'>{vendas_por_canal.get(canal, 0):,.0f} vendas válidas</span></span>"
+        f"<span><strong style='color:#111827;'>{canal}</strong>&nbsp;&nbsp;<span style='color:#8b929d;'>{vendas_por_canal.get(canal, 0):,.0f} vendas</span></span>"
         f"<span style='font-weight:700; color:#374151;'>{roas:.2f}x</span></div>"
         f"<div style='width:100%; height:6px; margin-top:0.25rem; border-radius:999px; background:linear-gradient(90deg, #2f7f64 0%, #2f7f64 {roas / roas_max * 100:.1f}%, #e5e7eb {roas / roas_max * 100:.1f}%);'></div></div>"
         for canal, roas in roas_canal["roas"].items()
     )
 
     top_issues = atendimento["categoria_problema"].value_counts().head(5)
-    atendimento_total = atendimento["custo_operacional_ticket"].sum()
+    atendimento_2023 = atendimento[
+        (atendimento["data_abertura"] >= "2023-01-01") & (atendimento["data_abertura"] < "2024-01-01")
+    ].copy()
+    atendimento_total = atendimento_2023["custo_operacional_ticket"].sum()
     custo_por_problema = (
-        atendimento.groupby("categoria_problema")
+        atendimento_2023.groupby("categoria_problema")
         .agg(tickets=("categoria_problema", "size"), custo=("custo_operacional_ticket", "sum"))
         .sort_values("custo", ascending=False)
     )
@@ -372,7 +378,7 @@ def render_painel_gestor():
         f"<div style='font-size:0.8rem; color:#4b5563;'>"
         f"<div style='display:flex; justify-content:space-between; gap:0.5rem; align-items:center;'>"
         f"<span>{categoria}</span>"
-        f"<span style='font-weight:700; color:#374151; white-space:nowrap;'>{format_money(custo)}</span></div>"
+        f"<span style='font-weight:700; color:#374151; white-space:nowrap;'>{format_thousands_br(custo)}</span></div>"
         f"<div style='width:100%; height:6px; margin-top:0.25rem; border-radius:999px; background:linear-gradient(90deg, #d85b4d 0%, #d85b4d {custo / custo_max * 100:.1f}%, #f1d8d5 {custo / custo_max * 100:.1f}%);'></div></div>"
         for categoria, custo in custo_por_problema["custo"].items()
     )
