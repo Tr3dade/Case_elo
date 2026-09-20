@@ -1,12 +1,14 @@
 
 ---
 **Prompt** (2026-09-19 23:47:07):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos.
 
 Threshold de frete grátis simulado: R$ 250
 Margem recuperada projetada: R$ 159.556,45
 Pedidos que passam a ter frete grátis: 81,1%
 Frete restante como % da receita do canal: 0,93%
+```
 
 
 **Resposta (FALLBACK, RuntimeError):**
@@ -16,12 +18,14 @@ Recomenda-se frete grátis acima de R$ 250 no Marketplace, recuperando R$ 159.55
 
 ---
 **Prompt** (2026-09-20 00:12:39):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos.
 
 Threshold de frete grátis simulado: R$ 250
 Margem recuperada projetada: R$ 159.556,45
 Pedidos que passam a ter frete grátis: 81,1%
 Frete restante como % da receita do canal: 0,93%
+```
 
 
 **Resposta (FALLBACK, RuntimeError):**
@@ -31,12 +35,14 @@ Recomenda-se frete grátis acima de R$ 250 no Marketplace, recuperando R$ 159.55
 
 ---
 **Prompt** (2026-09-20 00:13:17):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos.
 
 Threshold de frete grátis simulado: R$ 250
 Margem recuperada projetada: R$ 159.556,45
 Pedidos que passam a ter frete grátis: 81,1%
 Frete restante como % da receita do canal: 0,93%
+```
 
 
 **Resposta (FALLBACK, RuntimeError):**
@@ -46,12 +52,14 @@ Recomenda-se frete grátis acima de R$ 250 no Marketplace, recuperando R$ 159.55
 
 ---
 **Prompt** (2026-09-20 00:13:50):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos.
 
 Threshold de frete grátis simulado: R$ 250
 Margem recuperada projetada: R$ 159.556,45
 Pedidos que passam a ter frete grátis: 81,1%
 Frete restante como % da receita do canal: 0,93%
+```
 
 
 **Resposta (FALLBACK, InternalServerError):**
@@ -61,12 +69,14 @@ Recomenda-se frete grátis acima de R$ 250 no Marketplace, recuperando R$ 159.55
 
 ---
 **Prompt** (2026-09-20 00:14:36):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos.
 
 Threshold de frete grátis simulado: R$ 250
 Margem recuperada projetada: R$ 159.556,45
 Pedidos que passam a ter frete grátis: 81,1%
 Frete restante como % da receita do canal: 0,93%
+```
 
 
 **Resposta (FALLBACK, InternalServerError):**
@@ -76,12 +86,14 @@ Recomenda-se frete grátis acima de R$ 250 no Marketplace, recuperando R$ 159.55
 
 ---
 **Prompt** (2026-09-20 00:32:26):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos.
 
 Threshold de frete grátis simulado: R$ 250
 Margem recuperada projetada: R$ 159.556,45
 Pedidos que passam a ter frete grátis: 81,1%
 Frete restante como % da receita do canal: 0,93%
+```
 
 
 **Resposta (FALLBACK, InternalServerError):**
@@ -91,12 +103,14 @@ Recomenda-se frete grátis acima de R$ 250 no Marketplace, recuperando R$ 159.55
 
 ---
 **Prompt** (2026-09-20 00:46:59):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos.
 
 Threshold de frete grátis simulado: R$ 250
 Margem recuperada projetada: R$ 159.556,45
 Pedidos que passam a ter frete grátis: 81,1%
 Frete restante como % da receita do canal: 0,93%
+```
 
 
 **Resposta:**
@@ -106,12 +120,14 @@ Seria útil que eu elaborasse uma apresentação executiva ou um relatório deta
 
 ---
 **Prompt** (2026-09-20 00:49:17):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos. Responda apenas com o parágrafo: sem saudação, sem perguntas e sem oferecer material adicional.
 
 Threshold de frete grátis simulado: R$ 250
 Margem recuperada projetada: R$ 159.556,45
 Pedidos que passam a ter frete grátis: 81,1%
 Frete restante como % da receita do canal: 0,93%
+```
 
 
 **Resposta:**
@@ -119,12 +135,14 @@ Recomendo a adoção do novo threshold de frete grátis de R$ 250,00, estratégi
 
 ---
 **Prompt** (relatorio-v2, 2026-09-20 01:41:12):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos. Responda apenas com o parágrafo: sem saudação, sem perguntas e sem oferecer material adicional.
 
 Threshold de frete grátis simulado: R$ 250
 Margem recuperada projetada: R$ 159.556,45
 Pedidos que passam a ter frete grátis: 81,1%
 Frete restante como % da receita do canal: 0,93%
+```
 
 
 **Resposta:**
@@ -168,12 +186,14 @@ REGRAS
 
 ---
 **Prompt** (relatorio-v2, 2026-09-20 01:41:54):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos. Responda apenas com o parágrafo: sem saudação, sem perguntas e sem oferecer material adicional.
 
 Threshold de frete grátis simulado: R$ 275
 Margem recuperada projetada: R$ 153.886,48
 Pedidos que passam a ter frete grátis: 78,1%
 Frete restante como % da receita do canal: 1,07%
+```
 
 
 **Resposta:**
@@ -181,12 +201,14 @@ Recomendamos a implementação do threshold de frete grátis de R$ 275,00, visan
 
 ---
 **Prompt** (relatorio-v2, 2026-09-20 01:49:40):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos. Responda apenas com o parágrafo: sem saudação, sem perguntas e sem oferecer material adicional.
 
 Threshold de frete grátis simulado: R$ 250
 Margem recuperada projetada: R$ 159.556,45
 Pedidos que passam a ter frete grátis: 81,1%
 Frete restante como % da receita do canal: 0,93%
+```
 
 
 **Resposta:**
@@ -228,12 +250,14 @@ REGRAS
 
 ---
 **Prompt** (relatorio-v2, 2026-09-20 01:50:34):
+```text
 Você é um analista financeiro. Escreva um parágrafo curto (3-4 frases) recomendando a decisão abaixo para a diretoria da Vértice Retail, em português, tom executivo, sem inventar números além dos fornecidos. Responda apenas com o parágrafo: sem saudação, sem perguntas e sem oferecer material adicional.
 
 Threshold de frete grátis simulado: R$ 275
 Margem recuperada projetada: R$ 153.886,48
 Pedidos que passam a ter frete grátis: 78,1%
 Frete restante como % da receita do canal: 1,07%
+```
 
 
 **Resposta:**
@@ -266,6 +290,7 @@ REGRAS
 ---
 ## Agente [agente-v2] (run 20260920-021611-2743, 2026-09-20 02:16:11)
 **Prompt:**
+```text
 Você é um analista de precificação de frete da Vértice Retail. Sua tarefa é recomendar UM threshold de frete grátis para o canal Marketplace (pedidos com receita bruta maior ou igual ao threshold ficam isentos de frete).
 
 CONTEXTO
@@ -285,6 +310,7 @@ REGRAS
 - Escolha o threshold com o menor desvio em relação ao alvo. Só recomende threshold com zona_com_evidencia = true.
 - Copie os números exatamente como as observações devolvem (já estão no formato brasileiro). Não invente, arredonde nem calcule números novos.
 - O memo tem de 4 a 6 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional.
+```
 
 **Missão:** Recomende o threshold de frete grátis para o canal Marketplace.
 
@@ -301,6 +327,7 @@ REGRAS
 ---
 ## Agente [agente-v2] (run 20260920-021849-2f75, 2026-09-20 02:18:49)
 **Prompt:**
+```text
 Você é um analista de precificação de frete da Vértice Retail. Sua tarefa é recomendar UM threshold de frete grátis para o canal Marketplace (pedidos com receita bruta maior ou igual ao threshold ficam isentos de frete).
 
 CONTEXTO
@@ -320,12 +347,14 @@ REGRAS
 - Escolha o threshold com o menor desvio em relação ao alvo. Só recomende threshold com zona_com_evidencia = true.
 - Copie os números exatamente como as observações devolvem (já estão no formato brasileiro). Não invente, arredonde nem calcule números novos.
 - O memo tem de 4 a 6 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional.
+```
 
 **Missão:** Recomende o threshold de frete grátis para o canal Marketplace.
 
 ---
 ## Agente [agente-v2] (run 20260920-113248-7780, 2026-09-20 11:32:48)
 **Prompt:**
+```text
 Você é um analista de precificação de frete da Vértice Retail. Sua tarefa é recomendar UM threshold de frete grátis para o canal Marketplace (pedidos com receita bruta maior ou igual ao threshold ficam isentos de frete).
 
 CONTEXTO
@@ -345,6 +374,7 @@ REGRAS
 - Escolha o threshold com o menor desvio em relação ao alvo. Só recomende threshold com zona_com_evidencia = true.
 - Copie os números exatamente como as observações devolvem (já estão no formato brasileiro). Não invente, arredonde nem calcule números novos.
 - O memo tem de 4 a 6 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional.
+```
 
 **Missão:** Recomende o threshold de frete grátis para o canal Marketplace.
 
@@ -366,6 +396,7 @@ Recomenda-se a adoção do threshold de frete grátis de R$ 275 para o canal Mar
 ---
 ## Agente [agente-v2.1] (run 20260920-123238-cf0e, 2026-09-20 12:32:38)
 **Prompt:**
+```text
 Você é um analista de precificação de frete da Vértice Retail. Sua tarefa é recomendar UM threshold de frete grátis para o canal Marketplace (pedidos com receita bruta maior ou igual ao threshold ficam isentos de frete).
 
 CONTEXTO
@@ -386,6 +417,7 @@ REGRAS
 - Escolha o threshold com o menor desvio em relação ao alvo. Só recomende threshold com zona_com_evidencia = true.
 - Copie os números exatamente como as observações devolvem (já estão no formato brasileiro). Não invente, arredonde nem calcule números novos.
 - O memo tem de 5 a 7 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, o caminho percorrido em 1 ou 2 frases (quais thresholds você testou, na ordem, e por que o escolhido venceu), ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional.
+```
 
 **Missão:** Recomende o threshold de frete grátis para o canal Marketplace.
 
@@ -426,6 +458,7 @@ Recomenda-se a adoção do threshold de R$ 275 para o canal Marketplace por apre
 ---
 ## Agente [agente-v3] (run 20260920-123411-dcb2, 2026-09-20 12:34:11)
 **Prompt:**
+```text
 Você é um analista de precificação de frete da Vértice Retail. Sua tarefa é recomendar UM threshold de frete grátis para o canal Marketplace (pedidos com receita bruta maior ou igual ao threshold ficam isentos de frete).
 
 CONTEXTO
@@ -446,6 +479,7 @@ REGRAS
 - Escolha o threshold com o menor desvio em relação ao alvo. Só recomende threshold com zona_com_evidencia = true.
 - Copie os números exatamente como as observações devolvem (já estão no formato brasileiro). Não invente, arredonde nem calcule números novos.
 - O memo tem de 5 a 7 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, o caminho percorrido em 1 ou 2 frases (quais limites da rampa você identificou, quais thresholds testou, na ordem, e por que o escolhido venceu), ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional.
+```
 
 **Missão:** Recomende o threshold de frete grátis para o canal Marketplace.
 
@@ -486,6 +520,7 @@ Recomendo a adoção do threshold de R$ 275 para o canal Marketplace por apresen
 ---
 ## Agente [agente-v3] (run 20260920-123547-90c9, 2026-09-20 12:35:47)
 **Prompt:**
+```text
 Você é um analista de precificação de frete da Vértice Retail. Sua tarefa é recomendar UM threshold de frete grátis para o canal Marketplace (pedidos com receita bruta maior ou igual ao threshold ficam isentos de frete).
 
 CONTEXTO
@@ -506,6 +541,7 @@ REGRAS
 - Escolha o threshold com o menor desvio em relação ao alvo. Só recomende threshold com zona_com_evidencia = true.
 - Copie os números exatamente como as observações devolvem (já estão no formato brasileiro). Não invente, arredonde nem calcule números novos.
 - O memo tem de 5 a 7 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, o caminho percorrido em 1 ou 2 frases (quais limites da rampa você identificou, quais thresholds testou, na ordem, e por que o escolhido venceu), ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional.
+```
 
 **Missão:** Recomende o threshold de frete grátis para o canal Marketplace.
 
@@ -546,6 +582,7 @@ O threshold de frete grátis recomendado para o canal Marketplace é de R$ 275. 
 ---
 ## Agente [agente-v3] (run 20260920-123715-e3b1, 2026-09-20 12:37:15)
 **Prompt:**
+```text
 Você é um analista de precificação de frete da Vértice Retail. Sua tarefa é recomendar UM threshold de frete grátis para o canal Marketplace (pedidos com receita bruta maior ou igual ao threshold ficam isentos de frete).
 
 CONTEXTO
@@ -566,6 +603,7 @@ REGRAS
 - Escolha o threshold com o menor desvio em relação ao alvo. Só recomende threshold com zona_com_evidencia = true.
 - Copie os números exatamente como as observações devolvem (já estão no formato brasileiro). Não invente, arredonde nem calcule números novos.
 - O memo tem de 5 a 7 frases, num único parágrafo, sem aspas duplas dentro do texto: o threshold recomendado, os números dele comparados ao alvo, o caminho percorrido em 1 ou 2 frases (quais limites da rampa você identificou, quais thresholds testou, na ordem, e por que o escolhido venceu), ao menos um cenário testado e descartado com o motivo, e a premissa de que a recuperação de margem só se realiza se o Marketplace se comportar como os canais próprios. Cite a margem recuperada do threshold recomendado exatamente como veio da observação. Sem saudação, sem perguntas e sem oferecer material adicional.
+```
 
 **Missão:** Recomende o threshold de frete grátis para o canal Marketplace.
 

@@ -123,9 +123,27 @@ o tempo variou bastante (de 36 a 96 s) e o orçamento de tempo do agente é de 1
 ## 5. Onde está cada versão no repositório
 
 - `prototipo/src/agente.py` e `prototipo/src/test_agente.py`: a **versão em uso** (hoje, a v3). É o par que o
-  `python -m pytest -q` testa e que o front importa.
+  `python -m pytest -q` testa e que o front importa. Ele difere de `versoes/agente_v3.py` só na formatação do log
+  (prompt em bloco de código e `R$ 275` sem `.0`): o prompt e o comportamento são os mesmos.
 - `prototipo/versoes/`: **um arquivo de cada versão** (`agente_v2_1.py`, `agente_v3.py` e os testes de cada uma),
   só para consulta. O `conftest.py` da pasta impede o pytest de coletá-los. Para trocar de versão, copie o par
   desejado por cima de `src/agente.py` e `src/test_agente.py`.
 - Histórico do git: cada versão adotada tem o seu commit.
 - Rode o `pytest` sempre de dentro de `prototipo/src` (o `test_simulador.py` usa um caminho relativo aos dados).
+
+## 6. Relatório final (sem prompt)
+
+O `relatorio_final.py` monta o relatório completo **pelo código**, a partir do resultado do agente, e não usa
+nenhum prompt novo nem faz chamada à API. Os fatos (ponto de partida, tabela de evidência, alternativas
+descartadas, diferenças de margem, verificações) vêm do motor e do resultado do agente; o único texto de IA é o
+memo que o agente já escreveu, e o resto é texto fixo ou frase-modelo preenchida com números. Por isso não tem
+versão de prompt. Um prompt novo para o relatório rápido (`relatorio.py`, hoje `relatorio-v2`) continua sendo
+uma melhoria possível e não foi feito.
+
+## 7. Como ler o `prompts_log.md`
+
+Cada execução do agente e cada relatório rápido gravam uma entrada com o prompt, o que o modelo fez e o
+resultado. Desde 20/09 o prompt é gravado dentro de um bloco de código: fora dele, o markdown (VS Code e GitHub)
+lê trechos entre sinais de menor e maior como tags HTML e os esconde, e o prompt aparece quebrado. As entradas
+anteriores foram corrigidas uma única vez pelo `src/corrigir_log_prompts.py`, que só insere as cercas do bloco de
+código e confere, antes de gravar, que desfazendo as inserções o arquivo volta idêntico ao original.

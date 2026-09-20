@@ -196,7 +196,9 @@ def gerar_relatorio(resultado: dict) -> str:
     run_id = uso_api.novo_run_id()
     prompt = montar_prompt(resultado)
     momento = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    registrar_log(f"\n---\n**Prompt** ({VERSAO_RELATORIO}, {momento}):\n{prompt}\n")
+    # Prompt em bloco de código: fora dele, o markdown esconde trechos entre < e > (lidos como tags HTML).
+    # O prompt já termina com quebra de linha, então a cerca de fechamento vem logo depois dele.
+    registrar_log(f"\n---\n**Prompt** ({VERSAO_RELATORIO}, {momento}):\n```text\n{prompt}```\n")
 
     try:
         texto = chamar_llm(prompt, run_id)

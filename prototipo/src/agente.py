@@ -378,8 +378,10 @@ def rodar_agente(missao: str = MISSAO_PADRAO) -> dict:
     api_indisponivel = False   # True se a falha foi de API/lentidão: aí não vale chamá-la de novo
 
     momento = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # O prompt vai dentro de um bloco de código: fora dele, o markdown (VS Code, GitHub) lê textos como
+    # <o threshold escolhido> como tags HTML e os esconde.
     registrar_log(f"\n---\n## Agente [{VERSAO_AGENTE}] (run {run_id}, {momento})\n"
-                  f"**Prompt:**\n{SYSTEM_AGENTE}\n\n**Missão:** {missao}\n")
+                  f"**Prompt:**\n```text\n{SYSTEM_AGENTE}\n```\n\n**Missão:** {missao}\n")
 
     try:
         ferramentas = _criar_ferramentas(pedidos, rampa, perfil, alvo, testados)
@@ -483,6 +485,8 @@ def rodar_agente(missao: str = MISSAO_PADRAO) -> dict:
 
     if motivo is None:
         recomendado = _threshold_recomendado(declarado, memo, testados)
+        if isinstance(recomendado, float) and recomendado.is_integer():
+            recomendado = int(recomendado)              # 275.0 -> 275, também no log
         registrar_log(f"\n**Memo:**\n{memo}\n\n**Threshold recomendado:** R$ {recomendado}\n"
                       f"\n**Resultado:** ok ({passos} passos, {chamadas_tool} ações de ferramenta)\n")
     else:
