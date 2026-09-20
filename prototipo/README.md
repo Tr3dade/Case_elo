@@ -17,7 +17,9 @@ Os números vêm sempre do motor. O modelo escolhe o que testar e redige o texto
 ```
 prototipo/
 ├── README.md
-├── app.py                        front Streamlit (a versão do time está na branch front-trid)
+├── app.py                        front Streamlit (Painel do Gestor e Simulador de frete)
+├── ui/                           blocos do Simulador que dependem do backend: dados em cache, agente com
+│                                 progresso ao vivo, relatório final (o app.py só os chama)
 ├── .env                          local, NÃO vai pro git: a chave da Sandbox
 ├── data/
 │   ├── vendas.csv ...            bases do case
@@ -54,7 +56,7 @@ Sempre de dentro de `prototipo/src` (o `test_simulador.py` usa um caminho relati
 
 ```bash
 cd prototipo/src
-python -m pytest -q          # 125 testes, sem rede e sem chave
+python -m pytest -q          # 156 testes, sem rede e sem chave (inclui o front no AppTest)
 python prep_dados.py         # só se os dados mudarem: regenera os 3 CSVs derivados
 python relatorio.py          # relatório rápido: 1 chamada real (cerca de US$ 0,008)
 python agente.py             # agente: 5 a 6 chamadas reais (cerca de US$ 0,05, de 36 a 96 s)
@@ -87,7 +89,9 @@ A dependência vai num sentido só: `simulador` e `uso_api` não importam nada d
 | `curva_completa(lista, pedidos)` | lista de valores | `DataFrame`, uma linha de `simular` por valor (use `.to_dict("records")` para JSON) | não |
 | `simular_politica_observada(pedidos, rampa)` | os pedidos e a rampa | `dict` com o **alvo**: `margem_recuperada`, `pct_pedidos_isentos`, `frete_restante`, `frete_pct_receita_nova`, `threshold_equivalente` | não (cerca de 100 ms: guarde o resultado) |
 | `gerar_relatorio(resultado)` | o `dict` de `simular` | `str`: um parágrafo. Em falha da API, um texto-modelo (começa com `*(Texto-modelo`) | sim, 1 chamada |
-| `rodar_agente()` | nada (ou uma missão) | `dict`, veja abaixo | sim, 5 a 6 chamadas |
+| `gerar_relatorio_detalhado(resultado)` | o mesmo | `dict` com `texto`, `fallback`, `motivo_fallback` (só o tipo do erro) e `run_id` (para casar o custo em `uso_api`) | sim, 1 chamada |
+| `prep_dados.preparar_tudo(vendas)` | o DataFrame de `vendas.csv` | `(pedidos do Marketplace, rampa, perfil)` em memória, iguais aos 3 CSVs derivados | não |
+| `rodar_agente(missao, ao_passo=None, dados=None)` | nada (ou uma missão); `ao_passo(evento)` recebe `{"tipo", "passo", ...}` a cada evento (`inicio`, `chamada_modelo`, `acao`, `observacao`, `resposta_invalida`, `memo_recusado`, `fallback`, `fim`) e nunca derruba o agente; `dados=(pedidos, rampa, perfil)` evita ler os CSVs | `dict`, veja abaixo | sim, 5 a 6 chamadas |
 | `montar_relatorio_final(resultado, pedidos, rampa, alvo=None)` | o resultado do agente e os dados | `dict`, veja abaixo | não |
 | `uso_api.resumo_uso(run_id=None)` | um `run_id` (opcional) | `dict` com chamadas, tokens e custo em US$ | não |
 
@@ -173,9 +177,9 @@ if st.button("Rodar o agente"):
 
 ## Limitações e próximos passos
 
-- O agente é síncrono (de 36 a 96 s) e o progresso só aparece no terminal. Um parâmetro de progresso por passo
-  (para o front mostrar cada passo enquanto roda) ainda não existe.
-- `gerar_relatorio` devolve só texto: o front não sabe se veio da IA ou do texto-modelo, exceto pelo prefixo.
+- O agente é síncrono (de 36 a 96 s). O front mostra cada passo pelo parâmetro `ao_passo`, mas se o usuário mexer na
+  página durante a execução o Streamlit só atende o novo pedido depois que o agente termina.
+- `gerar_relatorio` devolve só texto; para saber se veio da IA ou do texto-modelo use `gerar_relatorio_detalhado`.
 - O menor threshold observado (R$ 250), as faixas da rampa e o teto de 1500 são constantes no código. Com dados
   novos, precisariam ser derivados dos dados.
 - A "zona com evidência" só tem limite inferior: um threshold bem acima de R$ 450 passa como "com evidência",
