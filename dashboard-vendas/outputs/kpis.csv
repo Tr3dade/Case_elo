@@ -1,0 +1,5 @@
+kpi,valor,unidade,contexto,periodo,meta
+receita_liquida_total,14170454.54,R$,20792 pedidos realizados,2023-01 a 2023-12,
+margem_contribuicao_pct,54.4,%,R$ 7708394.41 de margem,2023-01 a 2023-12,
+taxa_devolucao_pct,14.92,%,3645 pedidos; R$ 1349785.20 de margem perdida,2023-01 a 2023-12,
+ticket_medio,681.53,R$,custo de atendimento na janela: R$ 179371.00,2023-01 a 2023-12,

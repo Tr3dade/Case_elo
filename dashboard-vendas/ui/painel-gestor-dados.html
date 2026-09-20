@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel do Gestor — dados ao vivo</title>
+<style>
+  :root {
+    --color-bg: #f3f2f2;
+    --color-text: #201e1d;
+    --color-neutral-200: #eae7e7;
+    --color-neutral-300: #d7d3d3;
+    --color-neutral-400: #bab6b6;
+    --color-neutral-500: #9b9797;
+    --color-neutral-600: #7d7979;
+    --color-neutral-700: #605d5d;
+    --verde: oklch(0.52 0.075 158);
+    --verde-escuro: oklch(0.46 0.082 158);
+    --verde-2: oklch(0.64 0.062 158);
+    --verde-3: oklch(0.80 0.045 158);
+    --vermelho: oklch(0.52 0.165 16);
+    --vermelho-escuro: oklch(0.47 0.175 16);
+    --font-heading: Georgia, "Times New Roman", serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--color-bg); color: var(--color-text);
+    font-family: var(--font-body);
+    width: 100vw; height: 100vh; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #painel {
+    width: 1440px; height: 900px; flex: none; transform-origin: center center;
+    padding: 28px 34px 24px;
+    display: grid; grid-template-rows: auto auto minmax(0,1.05fr) minmax(0,1fr); gap: 20px;
+    background: var(--color-bg);
+  }
+  h1 { font-family: var(--font-heading); font-size: 26px; font-weight: 600; letter-spacing: -.01em; line-height: 1; }
+  h2 { font-family: var(--font-heading); font-size: 15px; font-weight: 600; }
+  .rotulo { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--color-neutral-600); }
+  .numero { font-family: var(--font-heading); font-size: 34px; font-weight: 600; line-height: 1.05; margin-top: 3px; }
+  .sub { font-size: 11.5px; color: var(--color-neutral-600); margin-top: 3px; }
+  .nota { margin-top: 8px; font-size: 11px; color: var(--color-neutral-600); text-wrap: pretty; }
+  .barra-fundo { height: 7px; background: var(--color-neutral-200); margin-top: 2px; }
+  .barra { height: 7px; }
+  .linha-item { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11.5px; margin-top: 8px; }
+  th { text-align: right; font-weight: 600; font-size: 10.5px; letter-spacing: .06em;
+       text-transform: uppercase; color: var(--color-neutral-600);
+       border-bottom: 1px solid var(--color-neutral-300); padding: 0 0 4px; }
+  th:first-child, td:first-child { text-align: left; }
+  td { text-align: right; padding: 5px 0; border-bottom: 1px solid var(--color-neutral-200); }
+  select {
+    font-family: var(--font-heading); font-size: 15px; font-weight: 600; color: var(--color-text);
+    background: transparent; border: none; border-bottom: 1.5px solid var(--verde);
+    padding: 1px 4px 2px 0; cursor: pointer;
+  }
+  #erro {
+    max-width: 640px; padding: 28px 32px; background: #fff;
+    border-left: 3px solid var(--vermelho); font-size: 13px; line-height: 1.6;
+  }
+  #erro h2 { margin-bottom: 10px; font-size: 18px; }
+  #erro code { background: var(--color-neutral-200); padding: 1px 5px; font-size: 12px; }
+  .oculto { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="erro" class="oculto"></div>
+<div id="painel" class="oculto"></div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Este painel LE os CSVs de ../outputs/ a cada carregamento. Para trocar os
+// numeros, rode o pipeline de novo -- nao ha valor cravado neste arquivo.
+//
+// Precisa ser servido por HTTP: abrir via file:// faz o navegador bloquear o
+// fetch por CORS. Na raiz do projeto:
+//     python3 -m http.server 8000
+// e acesse http://localhost:8000/ui/painel-gestor-dados.html
+// ---------------------------------------------------------------------------
+
+const ORIGEM = "../outputs/";
+
+const ARQUIVOS = {
+  kpis: "kpis.csv",
+  receitaBruta: "receita_bruta.csv",
+  receitaLiquida: "receita_liquida.csv",
+  margemMensal: "margem_mensal.csv",
+  canalCount: "canal_count.csv",
+  eficienciaCanal: "eficiencia_canal.csv",
+  atendimentoCusto: "atendimento_custo.csv",
+  receitaCategoria: "receita_por_categoria.csv",
+};
+
+// --- parsing -----------------------------------------------------------------
+
+/** Parser de CSV com suporte a campo entre aspas (kpis.csv usa em `contexto`). */
+function lerCSV(texto) {
+  const linhas = [];
+  let campo = "", linha = [], entreAspas = false;
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (entreAspas) {
+      if (c === '"' && texto[i + 1] === '"') { campo += '"'; i++; }
+      else if (c === '"') entreAspas = false;
+      else campo += c;
+    } else if (c === '"') entreAspas = true;
+    else if (c === ",") { linha.push(campo); campo = ""; }
+    else if (c === "\n") { linha.push(campo); linhas.push(linha); linha = []; campo = ""; }
+    else if (c !== "\r") campo += c;
+  }
+  if (campo !== "" || linha.length) { linha.push(campo); linhas.push(linha); }
+
+  const cabecalho = linhas.shift();
+  return linhas.filter(l => l.some(v => v !== "")).map(l => {
+    const registro = {};
+    cabecalho.forEach((col, i) => {
+      const bruto = (l[i] ?? "").trim();
+      // Numero so quando o campo inteiro e numerico -- "R$ 12.34 de margem" fica texto.
+      registro[col] = bruto !== "" && /^-?\d+(\.\d+)?$/.test(bruto) ? Number(bruto) : bruto;
+    });
+    return registro;
+  });
+}
+
+async function baixar(arquivo) {
+  const resposta = await fetch(ORIGEM + arquivo, { cache: "no-store" });
+  if (!resposta.ok) throw new Error(`${arquivo}: HTTP ${resposta.status}`);
+  return lerCSV(await resposta.text());
+}
+
+// --- formatacao pt-BR --------------------------------------------------------
+
+const nf = (casas) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+const inteiro = (v) => nf(0).format(Math.round(v));
+const pct = (v, casas = 1) => nf(casas).format(v) + "%";
+
+/** R$ com escala automatica: mi acima de 1 milhao, mil acima de 10 mil. */
+function reais(v, forcar) {
+  if (forcar === "cheio") return "R$ " + nf(2).format(v);
+  if (Math.abs(v) >= 1e6) return "R$ " + nf(2).format(v / 1e6) + " mi";
+  if (Math.abs(v) >= 1e4) return "R$ " + nf(1).format(v / 1e3) + " mil";
+  return "R$ " + nf(0).format(v);
+}
+
+const el = (tag, attrs = {}, filhos = []) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "style") n.style.cssText = v;
+    else if (k === "text") n.textContent = v;
+    else n.setAttribute(k, v);
+  }
+  (Array.isArray(filhos) ? filhos : [filhos]).forEach(f => f && n.appendChild(f));
+  return n;
+};
+const svgEl = (tag, attrs = {}) => {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  return n;
+};
+
+const MESES_CURTOS = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const rotuloMes = (aaaaMM) => MESES_CURTOS[Number(aaaaMM.split("-")[1]) - 1] ?? aaaaMM;
+
+// --- montagem ----------------------------------------------------------------
+
+function montar(d) {
+  // Indexa os KPIs por nome para nao depender da ordem das linhas do CSV.
+  const kpi = Object.fromEntries(d.kpis.map(r => [r.kpi, r]));
+  const valorKpi = (nome) => kpi[nome]?.valor ?? 0;
+
+  const meses = d.receitaLiquida.map(r => r.mes);
+  const liquidaPorMes = new Map(d.receitaLiquida.map(r => [r.mes, r.receita_liquida]));
+  const brutaPorMes = new Map(d.receitaBruta.map(r => [r.mes, r.receita_bruta]));
+  const margemPorMes = new Map(d.margemMensal.map(r => [r.mes, r.margem_contribuicao]));
+
+  const receitaLiquidaTotal = valorKpi("receita_liquida_total");
+  const receitaBrutaTotal = d.receitaBruta.reduce((s, r) => s + r.receita_bruta, 0);
+  const margemTotal = d.margemMensal.reduce((s, r) => s + r.margem_contribuicao, 0);
+  const vendasPorCanal = new Map(d.canalCount.map(r => [r.canal, r.numero_de_vendas]));
+  const totalVendasCanais = d.canalCount.reduce((s, r) => s + r.numero_de_vendas, 0);
+  const periodo = kpi.receita_liquida_total?.periodo ?? "";
+
+  const painel = document.getElementById("painel");
+  painel.replaceChildren();
+
+  // ---- cabecalho ----
+  const [mesIni, mesFim] = [meses[0], meses[meses.length - 1]];
+  const nomeMes = (m) => new Date(m + "-02T00:00:00").toLocaleDateString("pt-BR", { month: "long" });
+  const maiuscula = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const intervalo = `${maiuscula(nomeMes(mesIni))} – ${maiuscula(nomeMes(mesFim))} ${mesFim.split("-")[0]}`;
+
+  painel.appendChild(el("header", { style: "display:flex;align-items:baseline;justify-content:space-between;gap:24px" }, [
+    el("div", { style: "display:flex;align-items:baseline;gap:14px" }, [
+      el("h1", { text: "Painel do Gestor" }),
+      el("span", { style: "font-size:12px;color:var(--color-neutral-600)", text: "Desempenho comercial · plataforma de e-commerce" }),
+    ]),
+    el("div", { style: "display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--color-neutral-600)" }, [
+      el("span", { style: "width:7px;height:7px;background:var(--verde);border-radius:50%;display:inline-block" }),
+      el("span", { text: intervalo }),
+      el("span", { style: "color:var(--color-neutral-400)", text: "|" }),
+      el("span", { text: `${inteiro(valorKpi("receita_liquida_total") / valorKpi("ticket_medio"))} pedidos · ${inteiro(totalVendasCanais)} vendas atribuídas a canais` }),
+    ]),
+  ]));
+
+  // ---- faixa de KPIs ----
+  const retencao = 100 * receitaLiquidaTotal / receitaBrutaTotal;
+  const pedidosRealizados = kpi.receita_liquida_total?.contexto?.match(/\d+/)?.[0];
+  const devolvidos = kpi.taxa_devolucao_pct?.contexto?.match(/\d+/)?.[0];
+  const margemPerdida = Number(kpi.taxa_devolucao_pct?.contexto?.match(/R\$ ([\d.]+)/)?.[1] ?? 0);
+  const custoAtendimento = d.atendimentoCusto.reduce((s, r) => s + r.custo_operacional_ticket, 0);
+
+  const cartoes = [
+    ["Receita líquida", reais(receitaLiquidaTotal), null,
+     `Bruta ${reais(receitaBrutaTotal)} · retenção ${pct(retencao)}`],
+    ["Margem de contribuição", pct(valorKpi("margem_contribuicao_pct")), "var(--verde-escuro)",
+     `${reais(margemTotal)} de margem no período`],
+    ["Taxa de devolução", pct(valorKpi("taxa_devolucao_pct"), 2), "var(--vermelho-escuro)",
+     `${inteiro(devolvidos)} pedidos · ${reais(margemPerdida)} de margem perdida`],
+    ["Ticket médio", reais(valorKpi("ticket_medio"), "cheio"), null,
+     `Custo de atendimento ${reais(custoAtendimento)}`],
+  ];
+  painel.appendChild(el("section", {
+    style: "display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;border-top:2px solid var(--color-text);border-bottom:1px solid var(--color-neutral-300);padding:12px 0 13px",
+  }, cartoes.map(([rotulo, valor, cor, sub]) => el("div", {}, [
+    el("div", { class: "rotulo", text: rotulo }),
+    el("div", { class: "numero", style: cor ? `color:${cor}` : "", text: valor }),
+    el("div", { class: "sub", text: sub }),
+  ]))));
+
+  // ---- meio: barras mensais + roscas ----
+  const meio = el("section", { style: "display:grid;grid-template-columns:minmax(0,2.25fr) minmax(0,1fr);gap:28px;min-height:0" });
+  meio.appendChild(blocoReceitaMensal(meses, liquidaPorMes, brutaPorMes, margemPorMes));
+  meio.appendChild(roscaCategorias(d.receitaCategoria));
+  painel.appendChild(meio);
+
+  // ---- base: canais + atendimento + tabela ----
+  const base = el("section", {
+    style: "display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) minmax(0,1.1fr);gap:28px;min-height:0;border-top:1px solid var(--color-neutral-300);padding-top:12px",
+  });
+  base.appendChild(blocoCanais(d.eficienciaCanal, vendasPorCanal));
+  base.appendChild(blocoAtendimento(d.atendimentoCusto, custoAtendimento));
+  base.appendChild(blocoCategorias(d.receitaCategoria));
+  painel.appendChild(base);
+
+  painel.classList.remove("oculto");
+  ajustarEscala();
+}
+
+// --- blocos ------------------------------------------------------------------
+
+function blocoReceitaMensal(meses, liquida, bruta, margem) {
+  const L = 760, A = 250, esq = 38, dir = 8, topo = 12, base = 215;
+  const maxBruta = Math.max(...meses.map(m => bruta.get(m) ?? 0));
+  const teto = Math.ceil(maxBruta / 6e5) * 6e5;   // escala em passos de 0,6 mi
+  const y = (v) => base - (v / teto) * (base - topo);
+  const passo = (L - esq - dir) / meses.length;
+  const largura = passo * 0.56;
+
+  const svg = svgEl("svg", { viewBox: `0 0 ${L} ${A}`, preserveAspectRatio: "xMidYMid meet", style: "width:100%;height:100%;display:block" });
+
+  const grade = svgEl("g", { stroke: "var(--color-neutral-300)", "stroke-width": "1" });
+  const rotulos = svgEl("g", { "font-family": "var(--font-body)", "font-size": "9.5", fill: "var(--color-neutral-600)", "text-anchor": "end" });
+  for (let i = 0; i <= 4; i++) {
+    const v = teto * i / 4, yy = y(v);
+    const linha = svgEl("line", { x1: esq, y1: yy, x2: L - dir, y2: yy });
+    if (i === 0) linha.setAttribute("stroke", "var(--color-neutral-500)");
+    grade.appendChild(linha);
+    const t = svgEl("text", { x: esq - 6, y: yy + 3 });
+    t.textContent = i === 4 ? nf(1).format(v / 1e6) + " mi" : nf(1).format(v / 1e6);
+    rotulos.appendChild(t);
+  }
+  svg.append(grade, rotulos);
+
+  const barras = svgEl("g");
+  const eixoX = svgEl("g", { "font-family": "var(--font-body)", "font-size": "9.5", fill: "var(--color-neutral-600)", "text-anchor": "middle" });
+  const linhaMargem = svgEl("polyline", { fill: "none", stroke: "var(--color-text)", "stroke-width": "1.5" });
+  const pontos = [];
+
+  meses.forEach((m, i) => {
+    const x = esq + passo * i + (passo - largura) / 2;
+    const vl = liquida.get(m) ?? 0, vb = bruta.get(m) ?? 0;
+    barras.appendChild(svgEl("rect", { x, y: y(vl), width: largura, height: base - y(vl), fill: "var(--verde)" }));
+    // A faixa vermelha e a diferenca bruta-liquida: devolucoes e descontos.
+    barras.appendChild(svgEl("rect", { x, y: y(vb), width: largura, height: y(vl) - y(vb), fill: "var(--vermelho)" }));
+    const rot = svgEl("text", { x: x + largura / 2, y: base + 17 });
+    rot.textContent = rotuloMes(m);
+    eixoX.appendChild(rot);
+    pontos.push(`${x + largura / 2},${y(margem.get(m) ?? 0)}`);
+  });
+  linhaMargem.setAttribute("points", pontos.join(" "));
+  svg.append(barras, eixoX, linhaMargem);
+
+  // Insight calculado, nao escrito a mao: meses que somam >= 50% da receita.
+  const ordenados = [...meses].sort((a, b) => (liquida.get(b) ?? 0) - (liquida.get(a) ?? 0));
+  const total = meses.reduce((s, m) => s + (liquida.get(m) ?? 0), 0);
+  const top = [], nomeLongo = (m) => new Date(m + "-02T00:00:00").toLocaleDateString("pt-BR", { month: "long" });
+  let acumulado = 0;
+  for (const m of ordenados) { top.push(m); acumulado += liquida.get(m) ?? 0; if (acumulado / total >= 0.5) break; }
+  top.sort();  // cronologico na frase, ainda que escolhidos por receita
+  const lider = ordenados[0];
+  const nota = `${top.map(nomeLongo).join(", ")} concentram ${pct(100 * acumulado / total, 0)} da receita do período — ` +
+               `${nomeLongo(lider)} sozinho responde por ${reais(liquida.get(lider))} líquidos.`;
+
+  const legenda = (cor, texto, barra) => el("span", { style: "display:flex;align-items:center;gap:5px" }, [
+    el("i", { style: `width:${barra ? 14 : 9}px;height:${barra ? 2 : 9}px;background:${cor};display:inline-block` }),
+    el("span", { text: texto }),
+  ]);
+
+  return el("div", { style: "display:flex;flex-direction:column;min-height:0" }, [
+    el("div", { style: "display:flex;align-items:baseline;justify-content:space-between;gap:16px" }, [
+      el("h2", { text: "Receita mensal — bruta e líquida" }),
+      el("div", { style: "display:flex;gap:14px;font-size:11px;color:var(--color-neutral-600)" }, [
+        legenda("var(--verde)", "Receita líquida"),
+        legenda("var(--vermelho)", "Devoluções e descontos"),
+        legenda("var(--color-text)", "Margem de contribuição", true),
+      ]),
+    ]),
+    el("div", { style: "flex:1;min-height:0;margin-top:8px" }, svg),
+    el("p", { class: "nota", style: "margin:4px 0 0;font-size:11px;color:var(--color-neutral-600)", text: nota }),
+  ]);
+}
+
+function rosca(segmentos, centroTexto, centroSub, tamanhoCentro) {
+  const r = 52, circunferencia = 2 * Math.PI * r;
+  const svg = svgEl("svg", { viewBox: "0 0 140 140", style: "width:100%;max-height:100%" });
+  const g = svgEl("g", { transform: "translate(70,70) rotate(-90)", fill: "none", "stroke-width": "18" });
+  svg.appendChild(g);
+  g.appendChild(svgEl("circle", { r, stroke: "var(--color-neutral-300)" }));
+  let deslocamento = 0;
+  for (const { fracao, cor } of segmentos) {
+    const arco = circunferencia * fracao;
+    g.appendChild(svgEl("circle", {
+      r, stroke: cor, "stroke-dasharray": `${arco.toFixed(2)} ${(circunferencia - arco).toFixed(2)}`,
+      "stroke-dashoffset": (-deslocamento).toFixed(2),
+    }));
+    deslocamento += arco;
+  }
+  const t1 = svgEl("text", { x: 70, y: 66, "text-anchor": "middle", "font-family": "var(--font-heading)", "font-size": tamanhoCentro, "font-weight": "600", fill: "var(--color-text)" });
+  t1.textContent = centroTexto;
+  const t2 = svgEl("text", { x: 70, y: 82, "text-anchor": "middle", "font-family": "var(--font-body)", "font-size": "9.5", fill: "var(--color-neutral-600)" });
+  t2.textContent = centroSub;
+  svg.append(t1, t2);
+  return svg;
+}
+
+function roscaCategorias(categorias) {
+  const cores = ["var(--verde)", "var(--verde-2)", "var(--verde-3)", "var(--color-neutral-400)"];
+  const segmentos = categorias.map((c, i) => ({ fracao: c.share_receita_pct / 100, cor: cores[i % cores.length] }));
+  return el("div", { style: "display:flex;flex-direction:column;min-height:0" }, [
+    el("h2", { style: "margin:0 0 6px", text: "Receita por categoria" }),
+    el("div", { style: "flex:1;min-height:0;display:flex;align-items:center;justify-content:center" },
+      rosca(segmentos, String(categorias.length), "categorias", "20")),
+    el("div", { style: "font-size:11px;color:var(--color-neutral-700);display:grid;gap:4px;margin-top:6px" },
+      categorias.map((c, i) => el("div", { style: "display:flex;justify-content:space-between;gap:8px" }, [
+        el("span", {}, [
+          el("i", { style: `display:inline-block;width:8px;height:8px;background:${cores[i % cores.length]};margin-right:6px` }),
+          el("span", { text: c.categoria }),
+        ]),
+        el("span", { style: "color:var(--color-neutral-600)" }, [
+          el("span", { text: reais(c.receita_liquida) }),
+          el("b", { style: "font-weight:600;color:var(--color-text);margin-left:10px", text: pct(c.share_receita_pct) }),
+        ]),
+      ]))),
+  ]);
+}
+
+function blocoCanais(eficiencia, vendasPorCanal) {
+  const METRICAS = {
+    "ROAS agregado": { campo: "roas_agregado", rotulo: "ROAS agregado por canal", formato: (v) => nf(2).format(v) + "×" },
+    "Margem por R$ investido": { campo: "margem_por_real_investido", rotulo: "Margem por R$ investido", formato: (v) => "R$ " + nf(2).format(v) },
+  };
+  const METRICA_PADRAO = Object.keys(METRICAS)[0];
+  const lista = el("div", { style: "display:grid;gap:7px;margin-top:10px;font-size:11.5px" });
+  const nota = el("p", { class: "nota" });
+
+  function desenhar(nomeMetrica) {
+    const { campo, formato } = METRICAS[nomeMetrica] ?? METRICAS[METRICA_PADRAO];
+    const ordenado = [...eficiencia].sort((a, b) => b[campo] - a[campo]);
+    const maximo = ordenado[0][campo];
+    lista.replaceChildren(...ordenado.map((r, i) => el("div", {}, [
+      el("div", { class: "linha-item" }, [
+        el("span", { style: "display:flex;align-items:baseline;gap:8px" }, [
+          el("span", { text: r.canal }),
+          el("span", { style: "font-size:10.5px;color:var(--color-neutral-600)", text: `${inteiro(vendasPorCanal.get(r.canal) ?? 0)} vendas` }),
+        ]),
+        el(i === 0 ? "b" : "span", { style: i === 0 ? "font-weight:600" : "", text: formato(r[campo]) }),
+      ]),
+      el("div", { class: "barra-fundo" }, el("div", { class: "barra", style: `width:${(100 * r[campo] / maximo).toFixed(1)}%;background:var(--verde)` })),
+    ])));
+
+    // Nota derivada dos dados: maior volume vs. maior eficiencia.
+    const maiorVolume = [...eficiencia].sort((a, b) => (vendasPorCanal.get(b.canal) ?? 0) - (vendasPorCanal.get(a.canal) ?? 0))[0];
+    const melhor = ordenado[0];
+    nota.textContent = maiorVolume.canal === melhor.canal
+      ? `${melhor.canal} lidera em volume e em retorno ao mesmo tempo — ${inteiro(vendasPorCanal.get(melhor.canal))} vendas e ${formato(melhor[campo])}.`
+      : `${maiorVolume.canal} traz o maior volume (${inteiro(vendasPorCanal.get(maiorVolume.canal))} vendas) com o pior retorno — ` +
+        `${melhor.canal} faz ${inteiro(vendasPorCanal.get(melhor.canal))} vendas com ${nf(1).format(melhor[campo] / maiorVolume[campo])}× mais eficiência.`;
+  }
+
+  const seletor = el("select");
+  Object.entries(METRICAS).forEach(([chave, { rotulo }]) => seletor.appendChild(el("option", { value: chave, text: rotulo })));
+  seletor.value = METRICA_PADRAO;
+  seletor.addEventListener("change", () => desenhar(seletor.value));
+  desenhar(METRICA_PADRAO);
+
+  return el("div", { style: "display:flex;flex-direction:column;min-height:0" }, [
+    el("div", { style: "display:flex;align-items:center;justify-content:space-between;gap:10px" }, [
+      seletor,
+      el("span", { class: "rotulo", style: "letter-spacing:.06em", text: "Vendas no período" }),
+    ]),
+    lista, nota,
+  ]);
+}
+
+function blocoAtendimento(custos, total) {
+  const maximo = custos[0].custo_operacional_ticket;
+  const lider = custos[0];
+  return el("div", { style: "display:flex;flex-direction:column;min-height:0" }, [
+    el("h2", { text: "Custo de atendimento" }),
+    el("div", { style: "display:grid;gap:7px;margin-top:10px;font-size:11.5px" },
+      custos.map((r, i) => el("div", {}, [
+        el("div", { style: "display:flex;justify-content:space-between;gap:8px" }, [
+          el("span", { text: r.categoria_problema }),
+          el(i === 0 ? "b" : "span", { style: i === 0 ? "font-weight:600" : "", text: reais(r.custo_operacional_ticket) }),
+        ]),
+        el("div", { class: "barra-fundo" }, el("div", { class: "barra", style: `width:${(100 * r.custo_operacional_ticket / maximo).toFixed(1)}%;background:var(--vermelho)` })),
+      ]))),
+    el("p", { class: "nota", text: `"${lider.categoria_problema}" responde por ${pct(100 * lider.custo_operacional_ticket / total, 0)} do custo de suporte — o maior alvo isolado de automação.` }),
+  ]);
+}
+
+function blocoCategorias(categorias) {
+  const cabecalho = el("tr", {}, ["Categoria", "Receita líq.", "Margem", "Ticket"].map(t => el("th", { text: t })));
+  const corpo = categorias.map(c => el("tr", {}, [
+    el("td", { text: c.categoria }),
+    el("td", { text: reais(c.receita_liquida) }),
+    el("td", { text: pct(100 * c.margem_pct) }),
+    el("td", { text: "R$ " + inteiro(c.ticket_medio) }),
+  ]));
+
+  const margens = categorias.map(c => 100 * c.margem_pct);
+  const amplitude = Math.max(...margens) - Math.min(...margens);
+  const nota = amplitude < 2
+    ? `Margem praticamente idêntica nas ${categorias.length} categorias (${pct(Math.min(...margens))}–${pct(Math.max(...margens))}): ` +
+      `o mix de receita, não a rentabilidade, é o que diferencia.`
+    : `A margem varia ${nf(1).format(amplitude)} pontos entre categorias — o mix pesa na rentabilidade, não só no volume.`;
+
+  return el("div", { style: "display:flex;flex-direction:column;min-height:0" }, [
+    el("h2", { text: "Desempenho por categoria" }),
+    el("table", {}, [el("thead", {}, cabecalho), el("tbody", {}, corpo)]),
+    el("p", { class: "nota", text: nota }),
+  ]);
+}
+
+// --- escala e erro -----------------------------------------------------------
+
+/** O painel e desenhado em 1440x900 fixos e reduzido para caber na janela. */
+function ajustarEscala() {
+  const painel = document.getElementById("painel");
+  const escala = Math.min(window.innerWidth / 1440, window.innerHeight / 900, 1);
+  painel.style.transform = `scale(${escala})`;
+}
+window.addEventListener("resize", ajustarEscala);
+
+function mostrarErro(erro) {
+  const caixa = document.getElementById("erro");
+  const viaArquivo = location.protocol === "file:";
+  caixa.replaceChildren(
+    el("h2", { text: "Não consegui ler os dados" }),
+    el("p", { text: String(erro.message || erro) }),
+    el("p", { style: "margin-top:14px" }, el("b", { text: viaArquivo ? "Causa provável: a página foi aberta direto do disco." : "Verifique se os CSVs existem em outputs/." })),
+    el("p", { style: "margin-top:6px" }, el("span", {
+      text: viaArquivo
+        ? "O navegador bloqueia fetch() em file:// por CORS. Sirva a pasta do projeto por HTTP:"
+        : "Rode o pipeline para gerar as saídas:",
+    })),
+    el("pre", { style: "margin-top:10px;background:var(--color-neutral-200);padding:10px 12px;font-size:12px;overflow-x:auto",
+      text: viaArquivo
+        ? "cd " + "dashboard-vendas\npython3 -m http.server 8000\n\n# depois abra:\nhttp://localhost:8000/ui/painel-gestor-dados.html"
+        : "uv run python data_pipeline/pipeline.py" }),
+  );
+  caixa.classList.remove("oculto");
+}
+
+(async function iniciar() {
+  try {
+    const nomes = Object.keys(ARQUIVOS);
+    const tabelas = await Promise.all(nomes.map(n => baixar(ARQUIVOS[n])));
+    montar(Object.fromEntries(nomes.map((n, i) => [n, tabelas[i]])));
+  } catch (erro) {
+    console.error(erro);
+    mostrarErro(erro);
+  }
+})();
+</script>
+</body>
+</html>
