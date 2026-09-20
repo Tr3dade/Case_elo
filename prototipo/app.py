@@ -14,7 +14,10 @@ if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
 from relatorio import gerar_relatorio
-from simulador import curva_completa, simular
+from simulador import MENOR_THRESHOLD_OBSERVADO, curva_completa, simular
+from ui.dados import carregar_dados_frete
+from ui.simulador_frete import (guardar_threshold, inicializar_threshold, mostrar_aviso_zona,
+                                render_bloco_agente, render_relatorio_final)
 
 ECHARTS_AVAILABLE = st_echarts is not None
 
@@ -575,7 +578,7 @@ def render_painel_gestor():
 
 
 def render_simulador_frete():
-    pedidos = carregar_pedidos_marketplace()
+    pedidos, rampa, perfil, alvo = carregar_dados_frete(carregar_dados()["vendas"])
 
     st.markdown('<div class="dashboard-title">Simulador de frete grátis — Marketplace</div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-subtitle">Avalie o impacto financeiro de alterar o threshold de frete grátis.</div>', unsafe_allow_html=True)
@@ -585,19 +588,23 @@ def render_simulador_frete():
         if st.button("Cenário conservador · R$ 450", width="stretch"):
             st.session_state["threshold_frete"] = 450
     with cenario_col2:
-        if st.button("Cenário alinhado · R$ 250", width="stretch"):
-            st.session_state["threshold_frete"] = 250
+        if st.button(f"Cenário alinhado · R$ {MENOR_THRESHOLD_OBSERVADO}", width="stretch"):
+            st.session_state["threshold_frete"] = MENOR_THRESHOLD_OBSERVADO
 
+    # Slider com key: o valor vive em session_state["threshold_frete"]. Sem a key, o value= mudava a cada
+    # movimento, o Streamlit tratava como widget novo e perdia um movimento a cada dois.
+    inicializar_threshold(MENOR_THRESHOLD_OBSERVADO)
     threshold = st.slider(
         "Threshold de frete grátis",
         min_value=0,
         max_value=1500,
-        value=st.session_state.get("threshold_frete", 250),
-        step=10,
+        step=5,
         format="R$ %d",
+        key="threshold_frete",
     )
-    st.session_state["threshold_frete"] = threshold
+    guardar_threshold(threshold)
     resultado = simular(threshold, pedidos)
+    mostrar_aviso_zona(resultado)
 
     st.markdown("<div style='height: 0.5rem'></div>", unsafe_allow_html=True)
     m1, m2, m3, m4 = st.columns(4)
@@ -631,6 +638,9 @@ def render_simulador_frete():
         if st.button("Gerar recomendação", type="primary"):
             with st.spinner("Gerando recomendação..."):
                 st.markdown(gerar_relatorio(resultado))
+
+    render_bloco_agente((pedidos, rampa, perfil, alvo))
+    render_relatorio_final()
 
 
 st.set_page_config(page_title="Dashboard Executivo — Vértice Retail", layout="wide")
