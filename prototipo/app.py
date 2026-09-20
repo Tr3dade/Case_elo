@@ -16,6 +16,9 @@ if SRC_DIR not in sys.path:
 from relatorio import gerar_relatorio
 from simulador import MENOR_THRESHOLD_OBSERVADO, curva_completa, simular
 from ui.dados import carregar_dados_frete
+from ui.grafico_mensal import eixos_do_grafico
+from ui.qualidade_dados import render_ressalvas
+from ui.roas import render_aviso_roas
 from ui.simulador_frete import (guardar_threshold, inicializar_threshold, mostrar_aviso_zona,
                                 render_bloco_agente, render_relatorio_final)
 
@@ -217,6 +220,7 @@ def render_chart(chart_type, title, labels, values, color="#6d5ef5", highlight=N
 
 def build_revenue_mix_chart(months, receita_liquida, devolucoes_descontos, margem_contribuicao):
     theme = theme_tokens()
+    eixos = eixos_do_grafico(receita_liquida, devolucoes_descontos, margem_contribuicao)
     option = {
         "backgroundColor": theme["chart_bg"],
         "legend": {"show": False},
@@ -249,6 +253,7 @@ def build_revenue_mix_chart(months, receita_liquida, devolucoes_descontos, marge
                 "type": "value",
                 "name": "R$",
                 "position": "left",
+                **eixos["esq"],
                 "axisLabel": {
                     "formatter": JsCode("""function (value) {
                         return 'R$ ' + Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
@@ -261,8 +266,10 @@ def build_revenue_mix_chart(months, receita_liquida, devolucoes_descontos, marge
                 "type": "value",
                 "name": "Margem",
                 "position": "right",
+                **eixos["dir"],
                 "axisLabel": {
                     "formatter": JsCode("""function (value) {
+                        if (Number(value) < 0) return '';
                         return Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
                     }"""),
                     "color": theme["chart_text"],
@@ -524,7 +531,8 @@ def render_painel_gestor():
         f"""
         <div style="margin-top: 1.4rem; display:grid; grid-template-columns: 1.1fr .9fr 1.3fr; gap: 1.2rem; align-items: start;">
             <div style="padding-right: 0.8rem;">
-                <div style="font-weight: 700; color:#111827; font-size:1.1rem; margin-bottom: 0.5rem;">ROAS agregado por canal</div>
+                <div style="font-weight: 700; color:#111827; font-size:1.1rem; margin-bottom: 0.5rem;">ROAS reportado pelo marketing</div>
+                <div style="font-size:0.77rem; color:#5f6978; margin: -0.3rem 0 0.6rem 0;">receita atribuída, não reconciliada · campanhas iniciadas em 2023</div>
                 <div style="display:flex; flex-direction:column; gap:0.65rem;">{roas_rows}</div>
             </div>
             <div>
@@ -575,6 +583,8 @@ def render_painel_gestor():
         """,
         unsafe_allow_html=True,
     )
+    render_aviso_roas(marketing, vendas)
+    render_ressalvas(carregar_dados())
 
 
 def render_simulador_frete():
