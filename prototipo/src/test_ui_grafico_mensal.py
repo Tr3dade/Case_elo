@@ -82,11 +82,12 @@ def test_eixos_do_grafico_nega_as_deducoes():
 
 
 # ================================================================================================
-# 3. Dados reais (mesma conta do app: vendas_2023 inteiro, receita bruta - líquida, sem valor negativo)
+# 3. Dados reais (a base dos KPIs: 2023 sem cancelados e sem devolvidos; descontos = receita bruta - líquida)
 # ================================================================================================
 def series_mensais_reais():
     vendas = pd.read_csv(os.path.join(DATA_DIR, "vendas.csv"), parse_dates=["data_pedido"])
-    v23 = vendas[(vendas["data_pedido"] >= "2023-01-01") & (vendas["data_pedido"] < "2024-01-01")].copy()
+    v23 = vendas[(vendas["data_pedido"] >= "2023-01-01") & (vendas["data_pedido"] < "2024-01-01")
+                 & vendas["status_pagamento"].ne("Cancelado") & vendas["devolvido"].eq(False)].copy()
     v23["mes"] = v23["data_pedido"].dt.to_period("M").astype(str)
     meses = pd.period_range("2023-01", "2023-12", freq="M").astype(str)
     m = (v23.groupby("mes").agg(rl=("receita_liquida", "sum"), rb=("receita_bruta", "sum"),
@@ -99,5 +100,5 @@ def test_real_eixos_do_painel():
     eixos = g.eixos_do_grafico(receita, deducoes, margem)
     confere_propriedades(eixos, min(-d for d in deducoes), max(receita), min(margem), max(margem))
     # o eixo esquerdo fica como o ECharts o escolhia sozinho; o da margem se ajusta a ele
-    assert eixos["esq"] == {"min": -500_000, "max": 3_000_000, "interval": 500_000}
-    assert eixos["dir"] == {"min": -250_000, "max": 1_500_000, "interval": 250_000}
+    assert eixos["esq"] == {"min": -500_000, "max": 2_500_000, "interval": 500_000}
+    assert eixos["dir"] == {"min": -250_000, "max": 1_250_000, "interval": 250_000}

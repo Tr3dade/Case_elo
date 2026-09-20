@@ -19,7 +19,8 @@ prototipo/
 ├── README.md
 ├── app.py                        front Streamlit (Painel do Gestor e Simulador de frete)
 ├── ui/                           blocos do Simulador que dependem do backend: dados em cache, agente com
-│                                 progresso ao vivo, relatório final (o app.py só os chama)
+│                                 progresso ao vivo, relatório final (o app.py só os chama); e os cálculos do
+│                                 Painel (painel_calculos.py: mensal e categorias na base dos KPIs)
 ├── .env                          local, NÃO vai pro git: a chave da Sandbox
 ├── data/
 │   ├── vendas.csv ...            bases do case
@@ -56,7 +57,7 @@ Sempre de dentro de `prototipo/src` (o `test_simulador.py` usa um caminho relati
 
 ```bash
 cd prototipo/src
-python -m pytest -q          # 156 testes, sem rede e sem chave (inclui o front no AppTest)
+python -m pytest -q          # 217 testes, sem rede e sem chave (inclui o front no AppTest)
 python prep_dados.py         # só se os dados mudarem: regenera os 3 CSVs derivados
 python relatorio.py          # relatório rápido: 1 chamada real (cerca de US$ 0,008)
 python agente.py             # agente: 5 a 6 chamadas reais (cerca de US$ 0,05, de 36 a 96 s)

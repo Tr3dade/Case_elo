@@ -16,6 +16,7 @@ if SRC_DIR not in sys.path:
 from relatorio import gerar_relatorio
 from simulador import MENOR_THRESHOLD_OBSERVADO, curva_completa, simular
 from ui.dados import carregar_dados_frete
+from ui import painel_calculos
 from ui.grafico_mensal import eixos_do_grafico
 from ui.qualidade_dados import render_ressalvas
 from ui.roas import render_aviso_roas
@@ -218,9 +219,9 @@ def render_chart(chart_type, title, labels, values, color="#6d5ef5", highlight=N
     return None
 
 
-def build_revenue_mix_chart(months, receita_liquida, devolucoes_descontos, margem_contribuicao):
+def build_revenue_mix_chart(months, receita_liquida, descontos, margem_contribuicao):
     theme = theme_tokens()
-    eixos = eixos_do_grafico(receita_liquida, devolucoes_descontos, margem_contribuicao)
+    eixos = eixos_do_grafico(receita_liquida, descontos, margem_contribuicao)
     option = {
         "backgroundColor": theme["chart_bg"],
         "legend": {"show": False},
@@ -233,7 +234,7 @@ def build_revenue_mix_chart(months, receita_liquida, devolucoes_descontos, marge
                 const month = params[0].axisValue;
                 const parts = params.map(function (item) {
                     const value = Number(item.value);
-                    const formatted = item.seriesName === 'Devoluções e descontos'
+                    const formatted = item.seriesName === 'Descontos'
                         ? 'R$ ' + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 })
                         : 'R$ ' + value.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
                     return item.marker + ' ' + item.seriesName + ': ' + formatted;
@@ -286,10 +287,10 @@ def build_revenue_mix_chart(months, receita_liquida, devolucoes_descontos, marge
                 "itemStyle": {"color": "#2f7f64", "borderRadius": [6, 6, 0, 0]},
             },
             {
-                "name": "Devoluções e descontos",
+                "name": "Descontos",
                 "type": "bar",
                 "barWidth": "18%",
-                "data": [-value for value in devolucoes_descontos],
+                "data": [-value for value in descontos],
                 "itemStyle": {"color": "#d85b4d", "borderRadius": [6, 6, 0, 0]},
             },
             {
@@ -315,10 +316,9 @@ def render_painel_gestor():
     atendimento = carregar_dados()["atendimento"]
 
     vendas_2023 = vendas[(vendas["data_pedido"] >= "2023-01-01") & (vendas["data_pedido"] < "2024-01-01")].copy()
-    vendas_2023["mes"] = vendas_2023["data_pedido"].dt.to_period("M").astype(str)
 
     vendas_nao_canceladas = vendas_2023[vendas_2023["status_pagamento"].ne("Cancelado")].copy()
-    vendas_validas = vendas_nao_canceladas[vendas_nao_canceladas["devolvido"].eq(False)].copy()
+    vendas_validas = painel_calculos.vendas_validas(vendas)      # a base dos KPIs, do gráfico mensal, do donut e da tabela
     vendas_devolvidas = vendas_nao_canceladas[vendas_nao_canceladas["devolvido"].eq(True)].copy()
     receita_liquida = vendas_validas["receita_liquida"].sum()
     receita_bruta = vendas_validas["receita_bruta"].sum()
@@ -329,25 +329,8 @@ def render_painel_gestor():
     vendas_atribuidas = vendas_nao_canceladas["order_id"].nunique()
     ticket_medio = receita_liquida / pedidos_total
 
-    meses_ano = pd.period_range("2023-01", "2023-12", freq="M").astype(str)
-    receita_mensal = (
-        vendas_2023.groupby("mes", as_index=False)
-        .agg(
-            receita_liquida=("receita_liquida", "sum"),
-            receita_bruta=("receita_bruta", "sum"),
-            margem_contribuicao=("margem_contribuicao", "sum"),
-        )
-        .set_index("mes")
-        .reindex(meses_ano, fill_value=0.0)
-        .reset_index()
-        .rename(columns={"index": "mes"})
-    )
-    receita_mensal["devolucoes_descontos"] = (receita_mensal["receita_bruta"] - receita_mensal["receita_liquida"]).clip(lower=0)
-    receita_mensal["mes_label"] = pd.to_datetime(receita_mensal["mes"]).dt.strftime("%b").str.title()
-
-    categoria_receita = vendas_2023.groupby("categoria")["receita_liquida"].sum().sort_values(ascending=False)
-    categoria_margem = vendas_2023.groupby("categoria")["margem_contribuicao"].sum().sort_values(ascending=False)
-    categoria_ticket = categoria_receita / vendas_2023.groupby("categoria")["order_id"].nunique()
+    receita_mensal = painel_calculos.mensal(vendas)
+    categorias = painel_calculos.por_categoria(vendas)
 
     vendas_roas = vendas_2023[vendas_2023["status_pagamento"].ne("Cancelado")].copy()
     marketing_2023 = marketing[
@@ -479,7 +462,7 @@ def render_painel_gestor():
             "mes": receita_mensal["mes"],
             "mes_label": receita_mensal["mes_label"],
             "receita_liquida": receita_mensal["receita_liquida"].astype(float),
-            "devolucoes_descontos": receita_mensal["devolucoes_descontos"].astype(float),
+            "descontos": receita_mensal["descontos"].astype(float),
             "margem_contribuicao": receita_mensal["margem_contribuicao"].astype(float),
         })
         if ECHARTS_AVAILABLE and st_echarts is not None:
@@ -487,7 +470,7 @@ def render_painel_gestor():
                 options=build_revenue_mix_chart(
                     months=monthly_data["mes_label"].tolist(),
                     receita_liquida=monthly_data["receita_liquida"].tolist(),
-                    devolucoes_descontos=monthly_data["devolucoes_descontos"].tolist(),
+                    descontos=monthly_data["descontos"].tolist(),
                     margem_contribuicao=monthly_data["margem_contribuicao"].tolist(),
                 ),
                 height="420px",
@@ -502,23 +485,20 @@ def render_painel_gestor():
             """,
             unsafe_allow_html=True,
         )
-        categorias = categoria_receita.index.tolist()
-        valores = categoria_receita.values.tolist()
-        total_cat = sum(valores)
-        rings = []
-        for idx, (cat, val) in enumerate(zip(categorias, valores)):
-            pct = val / total_cat * 100
-            rings.append((cat, pct))
-
         donut_colors = ["#9caf8a", "#d7d5d0", "#b9c7b9", "#8a9f9a"]
         donut_html = ""
-        for i, (cat, pct) in enumerate(rings):
-            donut_html += f"<div style='display:flex; justify-content:space-between; margin-top: 0.35rem; font-size: 0.82rem;'><span style='display:flex; align-items:center; gap: 0.5rem;'><span style='width:10px; height:10px; background:{donut_colors[i]}; display:inline-block; border-radius:2px;'></span>{cat}</span><span style='font-weight: 700;'>{pct:.1f}%</span></div>"
+        fatias = []
+        acumulado = 0.0
+        for i, (cat, pct) in enumerate(categorias["participacao_pct"].items()):
+            cor = donut_colors[i % len(donut_colors)]
+            fatias.append(f"{cor} {acumulado}% {acumulado + pct}%")
+            acumulado += pct
+            donut_html += f"<div style='display:flex; justify-content:space-between; margin-top: 0.35rem; font-size: 0.82rem;'><span style='display:flex; align-items:center; gap: 0.5rem;'><span style='width:10px; height:10px; background:{cor}; display:inline-block; border-radius:2px;'></span>{cat}</span><span style='font-weight: 700;'>{pct:.1f}%</span></div>"
 
         st.markdown(
             f"""
             <div style="display:flex; align-items:center; justify-content:center; margin-top: 0.5rem;">
-                <div style="width: 210px; height: 210px; border-radius: 50%; background: conic-gradient(#9caf8a 0 {rings[0][1]}%, #d7d5d0 {rings[0][1]}% {rings[0][1]+rings[1][1]}%, #b9c7b9 {rings[0][1]+rings[1][1]}% {rings[0][1]+rings[1][1]+rings[2][1]}%, #8a9f9a {rings[0][1]+rings[1][1]+rings[2][1]}% 100%); position:relative;">
+                <div style="width: 210px; height: 210px; border-radius: 50%; background: conic-gradient({', '.join(fatias)}); position:relative;">
                     <div style="position:absolute; inset: 17%; background:#f8f8f8; border-radius:50%; display:flex; align-items:center; justify-content:center; text-align:center; font-size:1.1rem; font-weight:700; color:#111827;">{len(categorias)}<br>categorias</div>
                 </div>
             </div>
@@ -526,6 +506,17 @@ def render_painel_gestor():
             """,
             unsafe_allow_html=True,
         )
+
+    borda_linha = "border-bottom:1px solid #e5e7eb;"
+    categoria_rows = "".join(
+        f"<tr style='{'' if cat == categorias.index[-1] else borda_linha}'>"
+        f"<td style='padding: 0.45rem 0.25rem;'>{cat}</td>"
+        f"<td style='padding: 0.45rem 0.25rem; text-align:right;'>{format_mi(linha.receita_liquida)}</td>"
+        f"<td style='padding: 0.45rem 0.25rem; text-align:right;'>{format_pct_br(linha.margem_pct)}</td>"
+        f"<td style='padding: 0.45rem 0.25rem; text-align:right;'>R$ {linha.ticket:,.0f}</td></tr>"
+        for cat, linha in categorias.iterrows()
+    )
+    margem_min, margem_max = categorias["margem_pct"].min(), categorias["margem_pct"].max()
 
     st.markdown(
         f"""
@@ -550,34 +541,10 @@ def render_painel_gestor():
                             <th style="padding: 0.45rem 0.25rem; text-align:right;">Ticket</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr style="border-bottom:1px solid #e5e7eb;">
-                            <td style="padding: 0.45rem 0.25rem;">Moda</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 5,04 mi</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">54,5%</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 593</td>
-                        </tr>
-                        <tr style="border-bottom:1px solid #e5e7eb;">
-                            <td style="padding: 0.45rem 0.25rem;">Beleza</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 4,24 mi</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">54,4%</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 576</td>
-                        </tr>
-                        <tr style="border-bottom:1px solid #e5e7eb;">
-                            <td style="padding: 0.45rem 0.25rem;">Lifestyle</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 2,88 mi</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">54,1%</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 579</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 0.45rem 0.25rem;">Acessórios</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 2,01 mi</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">54,5%</td>
-                            <td style="padding: 0.45rem 0.25rem; text-align:right;">R$ 558</td>
-                        </tr>
+                    <tbody>{categoria_rows}
                     </tbody>
                 </table>
-                <div style="margin-top:0.7rem; font-size:0.77rem; color:#5f6978; line-height:1.55;">Margem praticamente idêntica nas 4 categorias (54,1%–54,5%): o mix de receita, não a rentabilidade, é o que diferencia.</div>
+                <div style="margin-top:0.7rem; font-size:0.77rem; color:#5f6978; line-height:1.55;">Margem praticamente idêntica nas {len(categorias)} categorias ({format_pct_br(margem_min)}–{format_pct_br(margem_max)}): o mix de receita, não a rentabilidade, é o que diferencia.</div>
             </div>
         </div>
         """,

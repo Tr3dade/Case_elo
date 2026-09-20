@@ -24,6 +24,7 @@ CARD_ANTES = [("Influenciador", "1,986", "7.48"), ("TikTok Ads", "2,583", "4.65"
               ("Instagram Ads", "4,386", "4.54"), ("Google Ads", "4,825", "3.50"),
               ("Orgânico", "2,873", "3.19"), ("Email Marketing", "2,484", "3.15"),
               ("Marketplace", "5,300", "2.92")]
+KPI_RECEITA_LIQUIDA, KPI_MARGEM = 14_170_454.54, 7_708_394.41
 KPIS_ANTES = [("Receita líquida", "R$ 14,17 mi", "Bruta R$ 15,40 mi · retenção 92.0%"),
               ("Margem de contribuição", "54,4%", "R$ 7.71 mi margem no período"),
               ("Taxa de devolução", "14.92%", "3,645 pedidos · R$ 1,35 mi de margem perdida"),
@@ -91,7 +92,7 @@ def test_aviso_de_reconciliacao_abaixo_do_card(painel):
     assert "0,3" not in avisos[0] and "0,2" not in avisos[0]     # só posições, nunca os valores 0,2 a 0,4
 
 
-def test_ressalvas_expander_fechado_com_as_seis_frases(painel):
+def test_ressalvas_expander_fechado_com_as_sete_frases(painel):
     assert len(painel.expander) == 1
     expander = painel.expander[0]
     assert expander.label == "Ressalvas sobre os dados"
@@ -99,8 +100,13 @@ def test_ressalvas_expander_fechado_com_as_seis_frases(painel):
     dentro = " ".join(m.value for m in expander.markdown)
     assert "não reconciliam entre si" in dentro
     for trecho in ["346 dos 15.000 clientes", "18.724 dos 28.589 pedidos", "67,0% dos pedidos", "24.437 pedidos",
-                   "Marketplace 6.040 pedidos", "~17,7x", "Períodos diferentes"]:
+                   "Marketplace 6.040 pedidos", "~17,7x", "Períodos diferentes",
+                   "(a) Os KPIs do topo, o gráfico mensal, o donut e a tabela de categorias", "(b) O card de ROAS",
+                   "(c) O Simulador de frete", "889 pedidos (4,3% dos pedidos)", "contam como receita"]:
         assert trecho in dentro, trecho
+    assert "26.538" not in dentro                                              # o gráfico mensal saiu da lista de bases
+    frases = [m for m in expander.markdown[-1].value.split("\n") if m.startswith("- ")]
+    assert len(frases) == 7
 
 
 def test_ressalvas_escapam_o_cifrao(painel):
@@ -123,12 +129,16 @@ def test_grafico_mantem_series_e_desenho_e_alinha_os_zeros(painel):
     receita, deducoes, margem = series_mensais_reais()
     opcoes = opcoes_do_grafico(painel)
     barras_receita, barras_deducoes, linha = opcoes["series"]
-    # nenhum valor mudou: mesmas séries de antes (deduções negativas, margem em linha suavizada no eixo 2)
+    # as séries saem da base dos KPIs (sem cancelados e sem devolvidos); deduções negativas, margem em linha
+    # suavizada no eixo 2
     assert barras_receita["data"] == pytest.approx(receita)
     assert barras_deducoes["data"] == pytest.approx([-d for d in deducoes])
     assert linha["data"] == pytest.approx(margem)
     assert (barras_receita["type"], barras_deducoes["type"], linha["type"]) == ("bar", "bar", "line")
     assert linha["smooth"] is True and linha["yAxisIndex"] == 1
+    assert barras_deducoes["name"] == "Descontos"                              # devolução não está nesta base
+    assert sum(barras_receita["data"]) == pytest.approx(KPI_RECEITA_LIQUIDA, abs=0.01)   # bate com o card do topo
+    assert sum(linha["data"]) == pytest.approx(KPI_MARGEM, abs=0.01)
     # o que mudou: os dois eixos com min/max/interval e o zero na mesma altura
     esq, dir_ = opcoes["yAxis"]
     assert {"min", "max", "interval"} <= set(esq) and {"min", "max", "interval"} <= set(dir_)
@@ -141,3 +151,39 @@ def test_grafico_mantem_series_e_desenho_e_alinha_os_zeros(painel):
 def test_eixo_da_margem_nao_rotula_a_parte_negativa(painel):
     formatter = opcoes_do_grafico(painel)["yAxis"][1]["axisLabel"]["formatter"]
     assert "< 0) return ''" in formatter
+
+
+# ================================================================================================
+# Tabela e donut de categorias: mesma base dos KPIs, nada digitado
+# ================================================================================================
+TICKETS_ERRADOS = ("R$ 593", "R$ 576", "R$ 579", "R$ 558")        # o que estava digitado no HTML
+CATEGORIAS = [("Moda", "R$ 5,04 mi", "54,5%", "R$ 692"), ("Beleza", "R$ 4,24 mi", "54,4%", "R$ 676"),
+              ("Lifestyle", "R$ 2,88 mi", "54,1%", "R$ 687"), ("Acessórios", "R$ 2,01 mi", "54,5%", "R$ 660")]
+
+
+def linhas_da_tabela_de_categorias(at) -> list:
+    html = next(m.value for m in at.markdown if "Desempenho por categoria" in m.value)
+    linhas = re.findall(r"<tr[^>]*>(.*?)</tr>", html, flags=re.S)[1:]              # a primeira é o cabeçalho
+    return [tuple(re.findall(r"<td[^>]*>(.*?)</td>", linha)) for linha in linhas]
+
+
+def test_tabela_de_categorias_e_calculada_e_o_ticket_esta_certo(painel):
+    assert linhas_da_tabela_de_categorias(painel) == CATEGORIAS
+    tela = texto_da_tela(painel)
+    for errado in TICKETS_ERRADOS:
+        assert errado not in tela, errado
+
+
+def test_ticket_das_categorias_e_coerente_com_o_ticket_geral(painel):
+    tickets = {c: int(t.replace("R$ ", "")) for c, _, _, t in linhas_da_tabela_de_categorias(painel)}
+    assert min(tickets.values()) <= 681.53 <= max(tickets.values())            # o geral é média ponderada das categorias
+
+
+def test_donut_e_tabela_usam_a_mesma_base(painel):
+    from ui import painel_calculos
+    vendas = pd.read_csv(os.path.join(DATA_DIR, "vendas.csv"), parse_dates=["data_pedido"])
+    fatias = painel_calculos.por_categoria(vendas)["participacao_pct"]
+    tela = texto_da_tela(painel)
+    for categoria, pct in fatias.items():
+        assert f"{categoria}</span><span style='font-weight: 700;'>{pct:.1f}%" in tela, categoria
+    assert fatias.round(1).to_dict() == {"Moda": 35.6, "Beleza": 29.9, "Lifestyle": 20.3, "Acessórios": 14.2}

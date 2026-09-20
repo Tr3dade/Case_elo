@@ -17,6 +17,7 @@ from ui import roas
 
 ANO_PAINEL = 2023
 STATUS_CANCELADO = "Cancelado"
+STATUS_AGUARDANDO = "Aguardando"
 
 
 def _periodo(datas: pd.Series) -> tuple:
@@ -25,7 +26,7 @@ def _periodo(datas: pd.Series) -> tuple:
 
 
 def calcular_ressalvas(dados: dict) -> dict:
-    """Números das 6 ressalvas, a partir de {"vendas", "clientes", "marketing", "atendimento"} (DataFrames).
+    """Números das 7 ressalvas, a partir de {"vendas", "clientes", "marketing", "atendimento"} (DataFrames).
 
     O Simulador de frete não é lido aqui: o que ele usa é exatamente o vendas inteiro filtrado pelo
     prep_dados.pedidos_marketplace, então a contagem dele sai da mesma função (import dentro da função: só
@@ -57,12 +58,16 @@ def calcular_ressalvas(dados: dict) -> dict:
     pedidos_por_cliente = vendas.groupby("customer_id")["order_id"].nunique().sort_values(ascending=False)
     pedidos_total = vendas["order_id"].nunique()
 
-    # (6) base de cada bloco: KPIs do topo (sem cancelados e sem devolvidos), card de ROAS (sem cancelados, com
-    # devolvidos; a receita dele é a receita_real de (4)), gráfico mensal (todos os status) e Simulador (vendas inteiro)
+    # (6) base de cada bloco: KPIs do topo, gráfico mensal, donut e tabela de categorias (sem cancelados e sem
+    # devolvidos), card de ROAS (sem cancelados, com devolvidos; a receita dele é a receita_real de (4)) e Simulador
+    # (vendas inteiro, só o Marketplace)
     do_ano = vendas[vendas["data_pedido"].dt.year.eq(ANO_PAINEL)]
     sem_cancelados = do_ano[do_ano["status_pagamento"].ne(STATUS_CANCELADO)]
     kpis = sem_cancelados[sem_cancelados["devolvido"].eq(False)]
     marketplace = pedidos_marketplace(vendas)
+
+    # (7) pedidos com pagamento "Aguardando" dentro da base dos KPIs: entram na receita como os aprovados
+    aguardando = kpis[kpis["status_pagamento"].eq(STATUS_AGUARDANDO)]
 
     return {
         "periodos": periodos,
@@ -79,8 +84,8 @@ def calcular_ressalvas(dados: dict) -> dict:
         "kpis_pedidos": int(kpis["order_id"].nunique()),
         "kpis_receita": float(kpis["receita_liquida"].sum()),
         "roas_pedidos": int(sem_cancelados["order_id"].nunique()),
-        "mensal_pedidos": int(do_ano["order_id"].nunique()),
-        "mensal_receita": float(do_ano["receita_liquida"].sum()),
+        "aguardando_pedidos": int(aguardando["order_id"].nunique()),
+        "aguardando_receita": float(aguardando["receita_liquida"].sum()),
         "simulador_periodo": periodos["vendas"],
         "simulador_receita": float(vendas["receita_liquida"].sum()),
         "simulador_marketplace": len(marketplace),
@@ -116,7 +121,7 @@ INTRODUCAO = ("As bases usadas no painel não reconciliam entre si. Os pontos ab
 
 
 def textos_ressalvas(r: dict) -> list:
-    """As 6 ressalvas em frases, na ordem. O "$" sai sem escape: quem exibe escapa (ver render_ressalvas)."""
+    """As 7 ressalvas em frases, na ordem. O "$" sai sem escape: quem exibe escapa (ver render_ressalvas)."""
     p = r["periodos"]
     fator = f"{r['fator']:.1f}".replace(".", ",")
     return [
@@ -134,15 +139,18 @@ def textos_ressalvas(r: dict) -> list:
         f"**customer_id de vendas não é chave de cliente confiável.** Os 3 maiores IDs concentram "
         f"{_pct(r['top3_pedidos'], r['pedidos_total'])} dos pedidos, entre {_inteiro(r['clientes_distintos_em_vendas'])} "
         "IDs distintos. Análises por cliente feitas a partir de vendas ficam comprometidas.",
-        f"**Cada bloco do Painel usa uma base diferente.** Os KPIs do topo consideram pedidos de {ANO_PAINEL} sem "
-        f"cancelados e sem devolvidos ({_inteiro(r['kpis_pedidos'])} pedidos; {_mi(r['kpis_receita'])} de receita "
-        f"líquida). O card de ROAS considera {ANO_PAINEL} sem cancelados, com devolvidos "
-        f"({_inteiro(r['roas_pedidos'])} pedidos; {_mi(r['receita_real'])}). O gráfico mensal considera {ANO_PAINEL} "
-        f"com todos os status ({_inteiro(r['mensal_pedidos'])} pedidos; {_mi(r['mensal_receita'])}). O Simulador de "
-        f"frete parte do arquivo de vendas inteiro, de {_intervalo(r['simulador_periodo'])}, com todos os status "
-        f"({_inteiro(r['pedidos_total'])} pedidos; {_mi(r['simulador_receita'])}), e simula só um canal "
-        f"(Marketplace {_inteiro(r['simulador_marketplace'])} pedidos; {_mi(r['simulador_marketplace_receita'])}). "
-        "Os números dos blocos não são diretamente comparáveis.",
+        f"**Cada bloco do Painel usa uma base diferente.** (a) Os KPIs do topo, o gráfico mensal, o donut e a tabela "
+        f"de categorias consideram pedidos de {ANO_PAINEL} sem cancelados e sem devolvidos "
+        f"({_inteiro(r['kpis_pedidos'])} pedidos; {_mi(r['kpis_receita'])} de receita líquida). (b) O card de ROAS "
+        f"considera {ANO_PAINEL} sem cancelados, com devolvidos ({_inteiro(r['roas_pedidos'])} pedidos; "
+        f"{_mi(r['receita_real'])}). (c) O Simulador de frete parte do arquivo de vendas inteiro, de "
+        f"{_intervalo(r['simulador_periodo'])}, com todos os status ({_inteiro(r['pedidos_total'])} pedidos; "
+        f"{_mi(r['simulador_receita'])}), e simula só um canal (Marketplace {_inteiro(r['simulador_marketplace'])} "
+        f"pedidos; {_mi(r['simulador_marketplace_receita'])}). Os números dos blocos não são diretamente comparáveis.",
+        f"**Pedidos aguardando pagamento contam como receita.** Na base dos KPIs são "
+        f"{_inteiro(r['aguardando_pedidos'])} pedidos ({_pct(r['aguardando_pedidos'], r['kpis_pedidos'])} dos pedidos), "
+        f"{_mi(r['aguardando_receita'])} de receita líquida ({_pct(r['aguardando_receita'], r['kpis_receita'])} da "
+        "receita), somados aos aprovados nos números do painel.",
     ]
 
 
