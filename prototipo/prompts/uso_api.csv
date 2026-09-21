@@ -59,3 +59,9 @@ data_hora,run_id,origem,passo,modelo,tokens_entrada,tokens_saida,custo_usd,segun
 2026-09-20 19:51:42,20260920-195042-d4f4,agente,4,openai/gemini-3-flash-preview,11923,650,0.007912,6.66,ok
 2026-09-20 19:51:50,20260920-195042-d4f4,agente,5,openai/gemini-3-flash-preview,12140,936,0.008878,7.43,ok
 2026-09-20 19:52:00,20260920-195042-d4f4,agente,6,openai/gemini-3-flash-preview,12363,1667,0.011182,10.6,ok
+2026-09-20 22:12:14,20260920-221204-b4fe,relatorio,1,openai/gemini-3-flash-preview,10080,661,0.007023,6.56,ok
+2026-09-20 22:12:47,20260920-221241-4939,agente,1,openai/gemini-3-flash-preview,10841,534,0.007023,5.8,ok
+2026-09-20 22:12:54,20260920-221241-4939,agente,2,openai/gemini-3-flash-preview,11499,783,0.008098,7.32,ok
+2026-09-20 22:12:57,20260920-221241-4939,agente,3,openai/gemini-3-flash-preview,11705,58,0.006026,2.73,ok
+2026-09-20 22:13:03,20260920-221241-4939,agente,4,openai/gemini-3-flash-preview,11917,554,0.00762,6.64,ok
+2026-09-20 22:14:47,20260920-221241-4939,agente,5,openai/gemini-3-flash-preview,12148,3001,0.015077,104.16,ok
